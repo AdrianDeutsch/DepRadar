@@ -1,5 +1,6 @@
 using DepRadar.Api;
 using DepRadar.Api.Endpoints;
+using DepRadar.Api.Realtime;
 using DepRadar.Application;
 using DepRadar.Infrastructure;
 using DepRadar.Infrastructure.Persistence;
@@ -27,9 +28,19 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
+// SignalR for live scan progress; a background broadcaster bridges the worker's
+// DB-written status to connected dashboard clients.
+builder.Services.AddSignalR();
+builder.Services.AddHostedService<ScanProgressBroadcaster>();
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
+
+// Serve the dashboard from wwwroot.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapDefaultEndpoints();
 app.MapOpenApi();
 
@@ -47,5 +58,6 @@ if (app.Environment.IsDevelopment())
 
 app.MapPackageEndpoints();
 app.MapScanEndpoints();
+app.MapHub<ScanHub>("/hubs/scan");
 
 await app.RunAsync();

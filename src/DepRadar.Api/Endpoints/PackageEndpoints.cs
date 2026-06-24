@@ -1,6 +1,7 @@
 using DepRadar.Application.Graphs;
 using DepRadar.Application.Messaging;
 using DepRadar.Application.Packages;
+using DepRadar.Application.Reports;
 using DepRadar.Application.Risk;
 using DepRadar.Application.Scans;
 using DepRadar.Application.Upgrades;
@@ -61,6 +62,12 @@ internal static class PackageEndpoints
             .Produces<UpgradeAdviceDto>()
             .Produces(StatusCodes.Status404NotFound);
 
+        group.MapGet("/{id}/report", GetReportAsync)
+            .WithName("GetPackageReport")
+            .WithSummary("Returns an audit-ready Markdown report for a scanned package.")
+            .Produces(StatusCodes.Status200OK, contentType: "text/markdown")
+            .Produces(StatusCodes.Status404NotFound);
+
         return app;
     }
 
@@ -104,5 +111,11 @@ internal static class PackageEndpoints
     {
         var advice = await sender.Send(new GetUpgradeAdviceQuery(id, from, to), cancellationToken);
         return advice is null ? Results.NotFound() : Results.Ok(advice);
+    }
+
+    private static async Task<IResult> GetReportAsync(string id, ISender sender, CancellationToken cancellationToken)
+    {
+        var markdown = await sender.Send(new GetPackageReportQuery(id), cancellationToken);
+        return markdown is null ? Results.NotFound() : Results.Text(markdown, "text/markdown");
     }
 }

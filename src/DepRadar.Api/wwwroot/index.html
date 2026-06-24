@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DepRadar</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Dep<span>Radar</span></div>
+    <div class="tagline">Know the health of every dependency before it costs you.</div>
+  </header>
+
+  <main>
+    <section class="scanbar">
+      <input id="packageInput" type="text" placeholder="NuGet package id, e.g. Serilog.Sinks.Console" autocomplete="off" />
+      <button id="scanButton">Scan</button>
+      <div id="status" class="status"></div>
+    </section>
+
+    <section id="results" class="results hidden">
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Dependency graph</h2>
+            <div id="overall" class="overall"></div>
+          </div>
+          <div id="graph"></div>
+          <div class="legend">
+            <span class="dot none"></span>healthy
+            <span class="dot medium"></span>medium
+            <span class="dot high"></span>high
+            <span class="dot critical"></span>critical
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Risk ranking</h2>
+            <button id="reportButton" class="ghost">Download report</button>
+          </div>
+          <table id="riskTable">
+            <thead>
+              <tr>
+                <th data-sort="packageId">Package</th>
+                <th data-sort="version">Version</th>
+                <th data-sort="score" class="num">Score</th>
+                <th data-sort="level">Level</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="drill" class="drill"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Upgrade advisor</h2></div>
+        <div id="upgrade" class="upgrade"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/@microsoft/signalr@8/dist/browser/signalr.min.js"></script>
+  <script src="https://unpkg.com/cytoscape@3/dist/cytoscape.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

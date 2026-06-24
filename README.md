@@ -30,8 +30,8 @@
   </tr>
 </table>
 
-> The visuals above are placeholders. The animated scan demo and real screenshots
-> are captured in Slice 5 — see [`docs/assets`](docs/assets/README.md).
+> The visuals above are placeholders. The **dashboard is live** — run the app and open
+> the API root to capture the real GIF/screenshots (see [`docs/assets`](docs/assets/README.md)).
 
 ## Problem & solution
 
@@ -53,11 +53,12 @@ has: **"Is this upgrade worth it — and how risky is it?"**
 - 🤖 **LLM upgrade advisor** — RAG over changelogs + risk data, plus a graph chatbot.
 - ⚡ **Live updates** — SignalR streams scan progress in real time.
 
-> Slices 1–4 are shipped: an async, durable scan resolves a package's **full
+> Slices 1–5 are shipped: an async, durable scan resolves a package's **full
 > transitive graph** from NuGet, scores every node for **security (OSV), license,
-> license-shift and maintenance** risk, and an **LLM-ready upgrade advisor** answers
-> "is this upgrade worth it?" with **RAG over pgvector** and prompt-injection defense.
-> The remaining items are the target picture; see the [roadmap](#roadmap).
+> license-shift and maintenance** risk, an **LLM-ready upgrade advisor** answers "is
+> this upgrade worth it?" with **RAG over pgvector** + prompt-injection defense, and a
+> **live dashboard** (SignalR) plus a **Markdown audit report** present it. The
+> remaining items are hardening; see the [roadmap](#roadmap).
 
 ## Architecture
 
@@ -126,7 +127,7 @@ sequenceDiagram
 | Area          | Technology                                   | Purpose                                                        |
 | ------------- | -------------------------------------------- | ------------------------------------------------------------- |
 | Runtime       | .NET 10 (LTS) / C# 14                         | Long-term support; modern language features.                  |
-| Web           | ASP.NET Core Minimal API + SignalR (Slice 5) | Thin HTTP surface; live scan progress.                        |
+| Web           | ASP.NET Core Minimal API + **SignalR**       | Thin HTTP surface; live scan progress to the dashboard.       |
 | Pipeline      | Worker Service + `System.Threading.Channels` | Ingestion decoupled from the API (Slice 2).                   |
 | Persistence   | PostgreSQL + EF Core 10                       | Graph as flat tables + recursive CTEs; `pgvector` for RAG.    |
 | CQRS          | **Hand-rolled mediator** (MIT)               | No commercially-licensed MediatR in the core ([ADR 0002]).    |
@@ -167,7 +168,14 @@ curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/graph/risk
 
 # "Is this upgrade worth it?" — RAG over changelogs + risk (from/to optional)
 curl "http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/upgrade?from=5.0.0&to=6.0.0"
+
+# Audit-ready Markdown report
+curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/report
 ```
+
+The **dashboard** is served at the API root (`/`): enter a package, watch the scan
+progress live over SignalR, then explore the graph, the sortable risk ranking and the
+upgrade advice — and download the report.
 
 The interactive API reference is at `/scalar/v1`.
 
@@ -222,9 +230,9 @@ object navigation.
 
 | Kind                    | Tooling                              | What it proves                                          |
 | ----------------------- | ------------------------------------ | ------------------------------------------------------- |
-| Unit                    | xUnit v3 + Shouldly                  | Domain logic — SemVer precedence, **risk scoring**, **prompt-injection shield**. |
+| Unit                    | xUnit v3 + Shouldly                  | SemVer precedence, risk scoring, prompt-injection shield, **report rendering**. |
 | Architecture            | NetArchTest                          | Layer boundaries hold; **MediatR & NuGet.Versioning** stay out of the core. |
-| Integration             | Testcontainers + **real PostgreSQL/pgvector** | Idempotent graph upserts, recursive-CTE closure, risk rollup, **RAG retrieval**. |
+| Integration             | Testcontainers + **real PostgreSQL/pgvector** | Idempotent graph upserts, recursive-CTE closure, risk rollup, RAG retrieval, **report**. |
 
 Quality gates: nullable reference types, `TreatWarningsAsErrors`,
 `AnalysisLevel=latest-recommended` (with a few deliberately-documented waivers),
@@ -248,7 +256,8 @@ dotnet test           # unit + architecture + integration (needs Docker)
       maintenance signals, explainable per-package & project health scoring.
 - [x] **Slice 4 — LLM layer:** changelog RAG over **pgvector**, upgrade advisor, an
       `ILanguageModel` seam (Claude behind a key), and prompt-injection defense.
-- [ ] **Slice 5 — Dashboard, SignalR live updates, report export.**
+- [x] **Slice 5 — Presentation:** static dashboard (graph + sortable risk ranking),
+      **SignalR** live scan progress, and a Markdown audit report export.
 - [ ] **Slice 6 — Hardening & presentation:** observability, caching, CI/CD, real demo assets.
 
 ## License & credits

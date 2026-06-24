@@ -16,4 +16,7 @@ public interface IScanRepository
     /// Returns the ids of queued scans, oldest first, for the worker to process.
     /// </summary>
     Task<IReadOnlyList<ScanId>> GetQueuedAsync(int max, CancellationToken cancellationToken);
+
+    /// <summary>Returns currently active scans (Queued or Running) for live progress.</summary>
+    Task<IReadOnlyList<Scan>> GetActiveAsync(int max, CancellationToken cancellationToken);
 }
