@@ -210,6 +210,10 @@ PublishScripts/
 !**/[Pp]ackages/build/
 # Uncomment if necessary however generally it will be regenerated when needed
 #!**/[Pp]ackages/repositories.config
+# DepRadar: the Domain/Application layers use a 'Packages' source folder — this is
+# NOT a NuGet restore directory, so keep it tracked despite the rule above.
+!src/**/Packages/
+!src/**/Packages/**
 # NuGet v3's project.json files produces more ignorable files
 *.nuget.props
 *.nuget.targets
