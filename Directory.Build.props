@@ -1,0 +1,27 @@
+<Project>
+
+  <!--
+    Centralized build configuration for every project in the repository.
+    Keeping the target framework and analyzer policy here is the single source
+    of truth (Briefing requirement) and keeps individual .csproj files lean,
+    which in turn minimizes merge conflicts.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Treat warnings as errors everywhere: the quality bar is non-negotiable. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Emit XML docs (public API is documented), but do not fail the build for
+         the few skeleton members that are still undocumented (CS1591). -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>

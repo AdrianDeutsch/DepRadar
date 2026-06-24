@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" role="img" aria-label="Placeholder for the risk dashboard screenshot">
+  <rect width="1200" height="600" rx="14" fill="#0d1117"/>
+  <rect x="1" y="1" width="1198" height="598" rx="14" fill="none" stroke="#21304a" stroke-dasharray="8 8"/>
+
+  <text x="48" y="68" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" font-weight="700" fill="#e6edf3">Risk ranking</text>
+
+  <!-- mock rows -->
+  <g font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="18">
+    <g transform="translate(48,110)">
+      <rect width="1104" height="64" rx="10" fill="#111c2e"/>
+      <text x="24" y="40" fill="#e6edf3">Newtonsoft.Json</text>
+      <rect x="900" y="20" width="80" height="26" rx="13" fill="#16241b"/><text x="940" y="38" fill="#34d399" text-anchor="middle">Low</text>
+      <text x="1040" y="40" fill="#9fb0c3">MIT</text>
+    </g>
+    <g transform="translate(48,186)">
+      <rect width="1104" height="64" rx="10" fill="#111c2e"/>
+      <text x="24" y="40" fill="#e6edf3">MediatR</text>
+      <rect x="884" y="20" width="96" height="26" rx="13" fill="#3a2a12"/><text x="932" y="38" fill="#fbbf24" text-anchor="middle">License shift</text>
+      <text x="1010" y="40" fill="#9fb0c3">Commercial</text>
+    </g>
+    <g transform="translate(48,262)">
+      <rect width="1104" height="64" rx="10" fill="#111c2e"/>
+      <text x="24" y="40" fill="#e6edf3">SomeAbandonedPkg</text>
+      <rect x="900" y="20" width="80" height="26" rx="13" fill="#3a1717"/><text x="940" y="38" fill="#f87171" text-anchor="middle">High</text>
+      <text x="1028" y="40" fill="#9fb0c3">archived</text>
+    </g>
+  </g>
+
+  <text x="600" y="470" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" fill="#9fb0c3" text-anchor="middle">Dashboard with sortable risk ranking and per-package drill-down</text>
+  <text x="600" y="502" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#5b6b82" text-anchor="middle">Placeholder · captured in Slice 5 · docs/assets/dashboard.png</text>
+</svg>

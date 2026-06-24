@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" role="img" aria-label="DepRadar — know the health of every dependency before it costs you">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#111c2e"/>
+    </linearGradient>
+    <radialGradient id="sweep" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#2dd4bf" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#2dd4bf" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="320" rx="16" fill="url(#bg)"/>
+
+  <!-- radar motif -->
+  <g transform="translate(980,160)" fill="none" stroke="#1f6f63" stroke-width="2">
+    <circle r="120" stroke="#173b39"/>
+    <circle r="86" stroke="#173b39"/>
+    <circle r="52" stroke="#173b39"/>
+    <circle r="18" stroke="#173b39"/>
+    <line x1="-120" y1="0" x2="120" y2="0" stroke="#173b39"/>
+    <line x1="0" y1="-120" x2="0" y2="120" stroke="#173b39"/>
+  </g>
+  <g transform="translate(980,160)">
+    <path d="M0 0 L120 0 A120 120 0 0 0 60 -104 Z" fill="url(#sweep)"/>
+    <circle cx="62" cy="-40" r="5" fill="#34d399"/>
+    <circle cx="-30" cy="48" r="5" fill="#fbbf24"/>
+    <circle cx="-72" cy="-22" r="5" fill="#f87171"/>
+  </g>
+
+  <!-- wordmark -->
+  <g font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+    <text x="80" y="150" font-size="76" font-weight="700" fill="#e6edf3">Dep<tspan fill="#2dd4bf">Radar</tspan></text>
+    <text x="84" y="196" font-size="26" font-weight="400" fill="#9fb0c3">Know the health of every dependency before it costs you.</text>
+    <g transform="translate(84,228)" font-size="15" font-weight="600">
+      <rect x="0" y="0" width="132" height="30" rx="15" fill="#16241b" stroke="#2f6f4f"/>
+      <text x="66" y="20" text-anchor="middle" fill="#34d399">.NET 10 · NuGet</text>
+      <rect x="144" y="0" width="150" height="30" rx="15" fill="#1b2333" stroke="#3b4b66"/>
+      <text x="219" y="20" text-anchor="middle" fill="#9fb0c3">Security · License · Graph</text>
+    </g>
+  </g>
+</svg>

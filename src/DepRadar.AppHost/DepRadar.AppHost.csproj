@@ -1,0 +1,17 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>ca4eef82-d788-443f-8c53-c5465fe12637</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DepRadar.Api\DepRadar.Api.csproj" />
+    <ProjectReference Include="..\DepRadar.Worker\DepRadar.Worker.csproj" />
+  </ItemGroup>
+
+</Project>

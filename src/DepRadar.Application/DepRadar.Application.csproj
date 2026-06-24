@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\DepRadar.Domain\DepRadar.Domain.csproj" />
+  </ItemGroup>
+
+  <!--
+    Only the lean DI and logging *abstractions* — enough to expose AddApplication
+    and the hand-rolled mediator, without dragging a full container into the
+    use-case layer.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

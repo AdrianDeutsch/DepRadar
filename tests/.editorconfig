@@ -1,0 +1,12 @@
+# Test-project analyzer relaxations. Inherits everything from the repo-root
+# .editorconfig; only the rules that fight standard test idioms are waived here.
+
+[*.cs]
+# Test names use the readable Method_under_test_expected_outcome convention.
+dotnet_diagnostic.CA1707.severity = none
+# Inline theory data / expected-value arrays are intentionally declared locally.
+dotnet_diagnostic.CA1861.severity = none
+# ConfigureAwait has no meaning in the test execution context.
+dotnet_diagnostic.CA2007.severity = none
+# Tests own their lifetime; threading TestContext tokens everywhere adds noise.
+dotnet_diagnostic.xUnit1051.severity = none

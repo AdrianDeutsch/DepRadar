@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DepRadar.Api/DepRadar.Api.csproj" />
+    <Project Path="src/DepRadar.AppHost/DepRadar.AppHost.csproj" />
+    <Project Path="src/DepRadar.Application/DepRadar.Application.csproj" />
+    <Project Path="src/DepRadar.Domain/DepRadar.Domain.csproj" />
+    <Project Path="src/DepRadar.Infrastructure/DepRadar.Infrastructure.csproj" />
+    <Project Path="src/DepRadar.ServiceDefaults/DepRadar.ServiceDefaults.csproj" />
+    <Project Path="src/DepRadar.Worker/DepRadar.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DepRadar.Architecture.Tests/DepRadar.Architecture.Tests.csproj" />
+    <Project Path="tests/DepRadar.Domain.Tests/DepRadar.Domain.Tests.csproj" />
+    <Project Path="tests/DepRadar.Integration.Tests/DepRadar.Integration.Tests.csproj" />
+  </Folder>
+</Solution>

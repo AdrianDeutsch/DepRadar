@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\DepRadar.Application\DepRadar.Application.csproj" />
+    <ProjectReference Include="..\DepRadar.Infrastructure\DepRadar.Infrastructure.csproj" />
+    <ProjectReference Include="..\DepRadar.ServiceDefaults\DepRadar.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Aspire client integration: wires the DbContext from the orchestrated
+         connection string, plus health checks, retries and telemetry. -->
+    <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+  </ItemGroup>
+
+</Project>

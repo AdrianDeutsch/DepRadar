@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The Domain is the heart of the system and intentionally has ZERO external
+    dependencies (no EF, no mediator, no DI). Architecture tests enforce this.
+  -->
+
+</Project>

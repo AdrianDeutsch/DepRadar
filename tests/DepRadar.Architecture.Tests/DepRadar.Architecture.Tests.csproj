@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="NetArchTest.Rules" />
+  </ItemGroup>
+
+  <!-- References every layer so its assembly is loadable for rule evaluation. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DepRadar.Domain\DepRadar.Domain.csproj" />
+    <ProjectReference Include="..\..\src\DepRadar.Application\DepRadar.Application.csproj" />
+    <ProjectReference Include="..\..\src\DepRadar.Infrastructure\DepRadar.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
