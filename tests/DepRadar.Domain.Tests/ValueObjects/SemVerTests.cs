@@ -66,6 +66,18 @@ public sealed class SemVerTests
     }
 
     [Fact]
+    public void Supports_the_nuget_fourth_component()
+    {
+        var version = SemVer.Parse("1.2.3.4");
+
+        version.Revision.ShouldBe(4);
+        version.ToString().ShouldBe("1.2.3.4");
+        (SemVer.Parse("1.2.3") < SemVer.Parse("1.2.3.1")).ShouldBeTrue();
+        // A zero revision is normalized away, matching NuGet.
+        SemVer.Parse("1.2.3.0").ToString().ShouldBe("1.2.3");
+    }
+
+    [Fact]
     public void Sorting_orders_by_release_then_prerelease()
     {
         var versions = new[] { "2.0.0", "1.10.0", "1.9.0", "2.0.0-rc.1", "1.9.0-beta" }

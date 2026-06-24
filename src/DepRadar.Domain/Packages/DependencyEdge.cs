@@ -20,11 +20,18 @@ public sealed class DependencyEdge
     {
     }
 
-    private DependencyEdge(PackageId dependentId, SemVer dependentVersion, PackageId dependencyId, string versionRange, bool isDirect)
+    private DependencyEdge(
+        PackageId dependentId,
+        SemVer dependentVersion,
+        PackageId dependencyId,
+        SemVer dependencyVersion,
+        string versionRange,
+        bool isDirect)
     {
         DependentId = dependentId;
         DependentVersion = dependentVersion;
         DependencyId = dependencyId;
+        DependencyVersion = dependencyVersion;
         VersionRange = versionRange;
         IsDirect = isDirect;
     }
@@ -38,6 +45,9 @@ public sealed class DependencyEdge
     /// <summary>The depended-upon package (the edge's target).</summary>
     public PackageId DependencyId { get; private set; }
 
+    /// <summary>The concrete version the range resolved to (the version NuGet would install).</summary>
+    public SemVer DependencyVersion { get; private set; } = null!;
+
     /// <summary>The raw requested NuGet version range, e.g. <c>"[6.0.0, )"</c>.</summary>
     public string VersionRange { get; private set; } = null!;
 
@@ -47,11 +57,12 @@ public sealed class DependencyEdge
     /// </summary>
     public bool IsDirect { get; private set; }
 
-    /// <summary>Creates a dependency edge.</summary>
+    /// <summary>Creates a resolved dependency edge.</summary>
     public static DependencyEdge Create(
         PackageId dependentId,
         SemVer dependentVersion,
         PackageId dependencyId,
+        SemVer dependencyVersion,
         string versionRange,
         bool isDirect = true)
     {
@@ -60,6 +71,6 @@ public sealed class DependencyEdge
             throw new ArgumentException("Version range must not be empty.", nameof(versionRange));
         }
 
-        return new DependencyEdge(dependentId, dependentVersion, dependencyId, versionRange.Trim(), isDirect);
+        return new DependencyEdge(dependentId, dependentVersion, dependencyId, dependencyVersion, versionRange.Trim(), isDirect);
     }
 }

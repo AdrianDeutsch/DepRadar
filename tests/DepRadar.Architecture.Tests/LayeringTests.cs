@@ -83,6 +83,22 @@ public sealed class LayeringTests
         }
     }
 
+    [Fact]
+    public void NuGet_Versioning_is_confined_to_infrastructure()
+    {
+        // ADR 0003/0004: the NuGet range library is an Infrastructure detail and must
+        // not leak into the dependency-free Domain or the Application layer.
+        foreach (var assembly in new[] { DomainAssembly, ApplicationAssembly })
+        {
+            var result = Types.InAssembly(assembly)
+                .ShouldNot()
+                .HaveDependencyOn("NuGet")
+                .GetResult();
+
+            AssertSuccess(result);
+        }
+    }
+
     private static void AssertSuccess(NetArchTest.Rules.TestResult result) =>
         result.IsSuccessful.ShouldBeTrue(
             result.IsSuccessful

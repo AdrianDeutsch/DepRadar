@@ -4,25 +4,29 @@ using System.Text.RegularExpressions;
 namespace DepRadar.Domain.ValueObjects;
 
 /// <summary>
-/// A Semantic Versioning 2.0.0 version with correct precedence ordering.
+/// A NuGet-flavored Semantic Version with correct precedence ordering: SemVer
+/// 2.0.0 plus the optional fourth numeric component (revision) that NuGet permits
+/// (e.g. <c>1.2.3.4</c>), mirroring <c>NuGetVersion</c>.
 /// </summary>
 /// <remarks>
 /// Deliberately hand-rolled to keep the Domain free of external dependencies
-/// (Briefing constraint). For the full NuGet floating/range grammar the
-/// production path is <c>NuGet.Versioning</c>; that trade-off is recorded in
+/// (Briefing constraint). The full NuGet floating/range grammar lives in
+/// Infrastructure via <c>NuGet.Versioning</c>; that trade-off is recorded in
 /// <c>docs/adr/0003-handrolled-semver.md</c>. Build metadata is parsed but,
-/// per the spec, ignored for both equality and precedence.
+/// per the spec, ignored for both equality and precedence; a zero revision is
+/// omitted from <see cref="ToString"/> to match NuGet normalization.
 /// </remarks>
 public sealed partial class SemVer : IEquatable<SemVer>, IComparable<SemVer>
 {
     private static readonly Regex Pattern = SemVerRegex();
     private readonly string[] _prereleaseIdentifiers;
 
-    private SemVer(int major, int minor, int patch, string? prerelease, string? buildMetadata)
+    private SemVer(int major, int minor, int patch, int revision, string? prerelease, string? buildMetadata)
     {
         Major = major;
         Minor = minor;
         Patch = patch;
+        Revision = revision;
         Prerelease = prerelease;
         BuildMetadata = buildMetadata;
         _prereleaseIdentifiers = prerelease is null
@@ -35,6 +39,9 @@ public sealed partial class SemVer : IEquatable<SemVer>, IComparable<SemVer>
     public int Minor { get; }
 
     public int Patch { get; }
+
+    /// <summary>The optional NuGet fourth component; 0 when absent.</summary>
+    public int Revision { get; }
 
     /// <summary>The prerelease label without the leading '-', or <see langword="null"/> for a stable release.</summary>
     public string? Prerelease { get; }
@@ -71,6 +78,7 @@ public sealed partial class SemVer : IEquatable<SemVer>, IComparable<SemVer>
             int.Parse(match.Groups["major"].Value, CultureInfo.InvariantCulture),
             int.Parse(match.Groups["minor"].Value, CultureInfo.InvariantCulture),
             int.Parse(match.Groups["patch"].Value, CultureInfo.InvariantCulture),
+            match.Groups["revision"].Success ? int.Parse(match.Groups["revision"].Value, CultureInfo.InvariantCulture) : 0,
             match.Groups["prerelease"].Success ? match.Groups["prerelease"].Value : null,
             match.Groups["buildmetadata"].Success ? match.Groups["buildmetadata"].Value : null);
         return true;
@@ -101,6 +109,12 @@ public sealed partial class SemVer : IEquatable<SemVer>, IComparable<SemVer>
             return core;
         }
 
+        core = Revision.CompareTo(other.Revision);
+        if (core != 0)
+        {
+            return core;
+        }
+
         // A version WITH a prerelease has lower precedence than one without.
         if (_prereleaseIdentifiers.Length == 0 && other._prereleaseIdentifiers.Length == 0)
         {
@@ -125,12 +139,14 @@ public sealed partial class SemVer : IEquatable<SemVer>, IComparable<SemVer>
     public override bool Equals(object? obj) => Equals(obj as SemVer);
 
     public override int GetHashCode() =>
-        HashCode.Combine(Major, Minor, Patch, Prerelease is null ? 0 : string.GetHashCode(Prerelease, StringComparison.Ordinal));
+        HashCode.Combine(Major, Minor, Patch, Revision, Prerelease is null ? 0 : string.GetHashCode(Prerelease, StringComparison.Ordinal));
 
-    /// <summary>Returns the canonical version string (build metadata included).</summary>
+    /// <summary>Returns the canonical version string (zero revision omitted, build metadata included).</summary>
     public override string ToString()
     {
-        var core = $"{Major}.{Minor}.{Patch}";
+        var core = Revision > 0
+            ? $"{Major}.{Minor}.{Patch}.{Revision}"
+            : $"{Major}.{Minor}.{Patch}";
         if (Prerelease is not null)
         {
             core += $"-{Prerelease}";
@@ -182,9 +198,10 @@ public sealed partial class SemVer : IEquatable<SemVer>, IComparable<SemVer>
         return left.Length.CompareTo(right.Length);
     }
 
-    // Official SemVer 2.0.0 regular expression (semver.org), with culture-invariant matching.
+    // SemVer 2.0.0 (semver.org) extended with NuGet's optional fourth (revision)
+    // component, culture-invariant matching.
     [GeneratedRegex(
-        @"^(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$",
+        @"^(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:\.(?<revision>0|[1-9]\d*))?(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$",
         RegexOptions.CultureInvariant)]
     private static partial Regex SemVerRegex();
 }

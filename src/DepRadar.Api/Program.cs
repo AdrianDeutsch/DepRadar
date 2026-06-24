@@ -17,7 +17,9 @@ builder.AddServiceDefaults();
 builder.AddNpgsqlDbContext<DepRadarDbContext>("depradardb");
 
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration["DepsDev:BaseUrl"]);
+builder.Services.AddInfrastructure(
+    builder.Configuration["DepsDev:BaseUrl"],
+    builder.Configuration["NuGet:BaseUrl"]);
 
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
@@ -42,5 +44,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapPackageEndpoints();
+app.MapScanEndpoints();
 
 await app.RunAsync();

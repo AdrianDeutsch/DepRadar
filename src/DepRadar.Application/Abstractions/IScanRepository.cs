@@ -1,0 +1,19 @@
+using DepRadar.Domain.Packages;
+using DepRadar.Domain.ValueObjects;
+
+namespace DepRadar.Application.Abstractions;
+
+/// <summary>Persistence port for the <see cref="Scan"/> aggregate.</summary>
+public interface IScanRepository
+{
+    /// <summary>Adds a newly created scan (commit via <see cref="IUnitOfWork"/>).</summary>
+    Task AddAsync(Scan scan, CancellationToken cancellationToken);
+
+    /// <summary>Loads a scan by id, tracked for update, or <see langword="null"/>.</summary>
+    Task<Scan?> GetAsync(ScanId id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns the ids of queued scans, oldest first, for the worker to process.
+    /// </summary>
+    Task<IReadOnlyList<ScanId>> GetQueuedAsync(int max, CancellationToken cancellationToken);
+}

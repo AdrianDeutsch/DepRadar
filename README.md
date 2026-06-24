@@ -53,9 +53,9 @@ has: **"Is this upgrade worth it — and how risky is it?"**
 - 🤖 **LLM upgrade advisor** — RAG over changelogs + risk data, plus a graph chatbot.
 - ⚡ **Live updates** — SignalR streams scan progress in real time.
 
-> Slice 1 (this commit) ships the end-to-end skeleton: scan one package → resolve it
-> via deps.dev → persist the graph in Postgres → read it back over the API. The
-> feature list above is the target picture; see the [roadmap](#roadmap).
+> Slices 1–2 are shipped: an async, durable scan resolves a package's **full
+> transitive graph** from NuGet, persists it idempotently in Postgres, and serves it
+> over the API. The feature list above is the target picture; see the [roadmap](#roadmap).
 
 ## Architecture
 
@@ -93,27 +93,30 @@ flowchart TB
     class MODEL domain;
 ```
 
-Ingestion flow for a single package (Slice 1):
+Async, durable scan pipeline (Slice 2):
 
 ```mermaid
 sequenceDiagram
     actor User
     participant API as Web API
-    participant M as Mediator
-    participant H as IngestPackageHandler
-    participant DD as deps.dev
-    participant R as PackageRepository
     participant DB as PostgreSQL
+    participant W as Worker (Channels)
+    participant NG as NuGet API
 
     User->>API: POST /api/packages/{id}/scan
-    API->>M: IngestPackageCommand(id)
-    M->>H: Handle (+ LoggingBehavior)
-    H->>DD: GET package + default version (retry · circuit breaker)
-    DD-->>H: versions, license, links
-    H->>R: Upsert(package, versions)  %% idempotent
-    R->>DB: INSERT / UPDATE
-    H-->>API: PackageDto
-    API-->>User: 200 OK
+    API->>DB: INSERT scan (Queued)
+    API-->>User: 202 Accepted (Location /api/scans/{id})
+
+    loop poll every 2s
+        W->>DB: claim Queued scans into Channel
+    end
+    W->>NG: resolve transitive graph (ranges to versions, retry + breaker)
+    NG-->>W: registration + dependencies
+    W->>DB: upsert packages / versions / edges (idempotent), mark Completed
+
+    User->>API: GET /api/packages/{id}/graph
+    API->>DB: recursive CTE (transitive closure)
+    API-->>User: nodes + edges
 ```
 
 ## Tech stack
@@ -147,11 +150,14 @@ This launches the Aspire dashboard, PostgreSQL (+ pgAdmin), the Web API and the
 Worker. Open the dashboard, find the **api** endpoint, then:
 
 ```bash
-# Scan a package (resolves via deps.dev and stores the graph)
-curl -X POST http://localhost:<api-port>/api/packages/Newtonsoft.Json/scan
+# Queue a transitive scan — returns 202 with the scan id
+curl -X POST http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/scan
 
-# Read it back
-curl http://localhost:<api-port>/api/packages/Newtonsoft.Json
+# Poll the scan status
+curl http://localhost:<api-port>/api/scans/<scan-id>
+
+# Read the resolved transitive dependency graph
+curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/graph
 ```
 
 The interactive API reference is at `/scalar/v1`.
@@ -162,19 +168,21 @@ The interactive API reference is at `/scalar/v1`.
 
 ## How it works
 
-1. A package id enters via the API (`POST /api/packages/{id}/scan`).
-2. The `IngestPackageCommand` is dispatched through the hand-rolled mediator, wrapped
-   by a logging pipeline behavior.
-3. The handler fetches metadata from **deps.dev** over a resilience-configured
-   `HttpClient`, parsing untrusted external data into domain value objects (malformed
-   versions are skipped, not fatal).
-4. The `Package` aggregate and its `PackageVersion`s are **upserted idempotently** —
-   re-running a scan never duplicates rows.
-5. The stored state is projected to a `PackageDto` and returned.
+1. `POST /api/packages/{id}/scan` creates a `Scan` row (`Queued`) and returns **202**
+   immediately — Postgres is the durable queue.
+2. In the Worker, `System.Threading.Channels` decouples a DB **poller** (producer)
+   from a **consumer** that runs each scan through the hand-rolled mediator.
+3. The resolver walks NuGet registration metadata breadth-first, resolving each
+   declared **version range to the concrete version** NuGet would install (via
+   `NuGet.Versioning`, Infrastructure-only), bounded by a node cap.
+4. Packages, versions and **dependency edges are upserted idempotently** — re-running
+   a scan never duplicates rows.
+5. `GET /api/packages/{id}/graph` returns the transitive closure, computed with a
+   **recursive CTE** over the flat `dependency_edges` table.
 
 The graph is stored as **flat tables** (`packages`, `package_versions`,
-`dependency_edges`) so the transitive closure can be computed with recursive CTEs
-rather than unbounded object navigation (Slice 2).
+`dependency_edges`, `scans`) so the transitive closure never materializes unbounded
+object navigation.
 
 ## Testing & quality
 
@@ -182,7 +190,7 @@ rather than unbounded object navigation (Slice 2).
 | ----------------------- | ------------------------------------ | ------------------------------------------------------- |
 | Unit                    | xUnit v3 + Shouldly                  | Domain logic — SemVer precedence, id normalization.     |
 | Architecture            | NetArchTest                          | Layer boundaries hold; **MediatR never appears**.       |
-| Integration             | Testcontainers + **real PostgreSQL** | EF mappings, value conversions, idempotent upserts.     |
+| Integration             | Testcontainers + **real PostgreSQL** | EF mappings, value conversions, idempotent graph upserts, recursive-CTE closure. |
 
 Quality gates: nullable reference types, `TreatWarningsAsErrors`,
 `AnalysisLevel=latest-recommended` (with a few deliberately-documented waivers),
@@ -200,7 +208,9 @@ dotnet test           # unit + architecture + integration (needs Docker)
 
 - [x] **Slice 1 — End-to-end skeleton:** package → deps.dev → Postgres → API, with
       Aspire, one integration test and architecture tests.
-- [ ] **Slice 2 — Transitive graph** + idempotent Channels ingestion pipeline.
+- [x] **Slice 2 — Transitive graph:** async durable scans, NuGet range resolution,
+      Channels worker pipeline, recursive-CTE graph API.
+- [ ] **Slice 3 — Risk analysis:** security, license, license-shift, maintenance + scoring.
 - [ ] **Slice 3 — Risk analysis:** security, license, license-shift, maintenance + scoring.
 - [ ] **Slice 4 — LLM layer:** changelog RAG (`pgvector`), upgrade assessment, graph chat.
 - [ ] **Slice 5 — Dashboard, SignalR live updates, report export.**

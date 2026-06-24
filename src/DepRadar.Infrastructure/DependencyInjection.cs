@@ -1,5 +1,7 @@
+using System.Net;
 using DepRadar.Application.Abstractions;
 using DepRadar.Infrastructure.External.DepsDev;
+using DepRadar.Infrastructure.External.NuGet;
 using DepRadar.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,22 +19,40 @@ namespace DepRadar.Infrastructure;
 public static class DependencyInjection
 {
     private const string DefaultDepsDevBaseUrl = "https://api.deps.dev/";
+    private const string DefaultNuGetBaseUrl = "https://api.nuget.org/";
+    private const string UserAgent = "DepRadar/0.2 (+https://github.com/AdrianDeutsch/DepRadar)";
 
-    /// <summary>Registers persistence adapters and the resilient deps.dev metadata source.</summary>
+    /// <summary>Registers persistence adapters and the resilient external API clients.</summary>
     /// <param name="services">The service collection.</param>
     /// <param name="depsDevBaseUrl">Base URL of the deps.dev API (overridable for tests).</param>
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, string? depsDevBaseUrl = null)
+    /// <param name="nuGetBaseUrl">Base URL of the NuGet V3 API (overridable for tests).</param>
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        string? depsDevBaseUrl = null,
+        string? nuGetBaseUrl = null)
     {
         services.AddScoped<IPackageRepository, PackageRepository>();
+        services.AddScoped<IScanRepository, ScanRepository>();
+        services.AddScoped<IGraphRepository, GraphRepository>();
+        services.AddScoped<IDependencyGraphResolver, DependencyGraphResolver>();
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<DepRadarDbContext>());
 
         services.AddHttpClient<IPackageMetadataSource, DepsDevPackageMetadataSource>(client =>
             {
                 client.BaseAddress = new Uri(depsDevBaseUrl ?? DefaultDepsDevBaseUrl);
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("DepRadar/0.1 (+https://github.com/AdrianDeutsch/DepRadar)");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
             })
             // Bundled retry + circuit breaker + total/attempt timeout + rate limiter.
             // Every external call goes through this — no naive HttpClient usage.
+            .AddStandardResilienceHandler();
+
+        services.AddHttpClient<NuGetClient>(client =>
+            {
+                client.BaseAddress = new Uri(nuGetBaseUrl ?? DefaultNuGetBaseUrl);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            })
+            // The registration API is gzip-only (registration5-gz-semver2).
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AutomaticDecompression = DecompressionMethods.All })
             .AddStandardResilienceHandler();
 
         return services;

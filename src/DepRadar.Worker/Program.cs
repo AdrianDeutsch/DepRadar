@@ -1,7 +1,7 @@
 using DepRadar.Application;
 using DepRadar.Infrastructure;
 using DepRadar.Infrastructure.Persistence;
-using DepRadar.Worker.Workers;
+using DepRadar.Worker.Pipeline;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -9,9 +9,14 @@ builder.AddServiceDefaults();
 builder.AddNpgsqlDbContext<DepRadarDbContext>("depradardb");
 
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration["DepsDev:BaseUrl"]);
+builder.Services.AddInfrastructure(
+    builder.Configuration["DepsDev:BaseUrl"],
+    builder.Configuration["NuGet:BaseUrl"]);
 
-builder.Services.AddHostedService<IngestionWorker>();
+// Ingestion pipeline: one shared queue, a DB poller (producer) and a consumer.
+builder.Services.AddSingleton<ScanDispatchQueue>();
+builder.Services.AddHostedService<ScanPollingService>();
+builder.Services.AddHostedService<ScanConsumerService>();
 
 var host = builder.Build();
 await host.RunAsync();

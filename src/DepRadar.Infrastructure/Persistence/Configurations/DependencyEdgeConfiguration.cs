@@ -31,6 +31,10 @@ internal sealed class DependencyEdgeConfiguration : IEntityTypeConfiguration<Dep
             .HasConversion<PackageIdValueConverter>()
             .HasMaxLength(256);
 
+        builder.Property(e => e.DependencyVersion)
+            .HasConversion<SemVerValueConverter>()
+            .HasMaxLength(256);
+
         builder.Property(e => e.VersionRange)
             .HasMaxLength(256);
 

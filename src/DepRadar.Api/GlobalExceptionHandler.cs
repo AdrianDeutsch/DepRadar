@@ -15,6 +15,7 @@ internal sealed class GlobalExceptionHandler(IProblemDetailsService problemDetai
         var (status, title) = exception switch
         {
             PackageNotFoundException => (StatusCodes.Status404NotFound, "Package not found"),
+            ScanNotFoundException => (StatusCodes.Status404NotFound, "Scan not found"),
             ArgumentException => (StatusCodes.Status400BadRequest, "Invalid request"),
             FormatException => (StatusCodes.Status400BadRequest, "Invalid request"),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred"),

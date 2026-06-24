@@ -26,6 +26,9 @@ public sealed class DepRadarDbContext(DbContextOptions<DepRadarDbContext> option
     /// <summary>The directed dependency-graph edges.</summary>
     public DbSet<DependencyEdge> DependencyEdges => Set<DependencyEdge>();
 
+    /// <summary>The scan runs.</summary>
+    public DbSet<Scan> Scans => Set<Scan>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
