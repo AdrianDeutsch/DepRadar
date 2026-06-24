@@ -18,7 +18,9 @@ public sealed class PostgresFixture : IAsyncLifetime
         // this machine; disable it and rely on explicit DisposeAsync cleanup.
         Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
 
-        _container = new PostgreSqlBuilder("postgres:17-alpine")
+        // pgvector image: a superset of Postgres that ships the `vector` extension
+        // needed by the changelog RAG store (Slice 4).
+        _container = new PostgreSqlBuilder("pgvector/pgvector:pg17")
             .Build();
     }
 

@@ -86,7 +86,7 @@ public sealed class ScanGraphTests(PostgresFixture fixture) : IClassFixture<Post
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddDbContext<DepRadarDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddDepRadarDbContext(connectionString);
         services.AddApplication();
         services.AddInfrastructure();
 

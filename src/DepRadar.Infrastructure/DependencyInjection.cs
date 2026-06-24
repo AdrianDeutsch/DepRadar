@@ -1,10 +1,13 @@
 using System.Net;
 using DepRadar.Application.Abstractions;
+using DepRadar.Infrastructure.Ai;
 using DepRadar.Infrastructure.External.DepsDev;
 using DepRadar.Infrastructure.External.NuGet;
 using DepRadar.Infrastructure.External.Osv;
 using DepRadar.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Pgvector.EntityFrameworkCore;
 
 namespace DepRadar.Infrastructure;
 
@@ -22,25 +25,35 @@ public static class DependencyInjection
     private const string DefaultDepsDevBaseUrl = "https://api.deps.dev/";
     private const string DefaultNuGetBaseUrl = "https://api.nuget.org/";
     private const string DefaultOsvBaseUrl = "https://api.osv.dev/";
-    private const string UserAgent = "DepRadar/0.3 (+https://github.com/AdrianDeutsch/DepRadar)";
+    private const string DefaultAnthropicModel = "claude-sonnet-4-6";
+    private const string UserAgent = "DepRadar/0.4 (+https://github.com/AdrianDeutsch/DepRadar)";
 
     /// <summary>Registers persistence adapters and the resilient external API clients.</summary>
     /// <param name="services">The service collection.</param>
     /// <param name="depsDevBaseUrl">Base URL of the deps.dev API (overridable for tests).</param>
     /// <param name="nuGetBaseUrl">Base URL of the NuGet V3 API (overridable for tests).</param>
     /// <param name="osvBaseUrl">Base URL of the OSV.dev API (overridable for tests).</param>
+    /// <param name="anthropicApiKey">Anthropic API key; when set, the live Claude advisor is used.</param>
+    /// <param name="anthropicModel">Anthropic model id (defaults to a current Claude model).</param>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         string? depsDevBaseUrl = null,
         string? nuGetBaseUrl = null,
-        string? osvBaseUrl = null)
+        string? osvBaseUrl = null,
+        string? anthropicApiKey = null,
+        string? anthropicModel = null)
     {
         services.AddScoped<IPackageRepository, PackageRepository>();
         services.AddScoped<IScanRepository, ScanRepository>();
         services.AddScoped<IGraphRepository, GraphRepository>();
         services.AddScoped<IRiskRepository, RiskRepository>();
+        services.AddScoped<IChangelogRepository, ChangelogRepository>();
+        services.AddScoped<IChangelogIndexer, ChangelogIndexer>();
         services.AddScoped<IDependencyGraphResolver, DependencyGraphResolver>();
+        services.AddSingleton<IEmbeddingGenerator, HashingEmbeddingGenerator>();
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<DepRadarDbContext>());
+
+        AddLanguageModel(services, anthropicApiKey, anthropicModel);
 
         services.AddHttpClient<IPackageMetadataSource, DepsDevPackageMetadataSource>(client =>
             {
@@ -68,5 +81,42 @@ public static class DependencyInjection
             .AddStandardResilienceHandler();
 
         return services;
+    }
+
+    /// <summary>
+    /// Registers the <see cref="DepRadarDbContext"/> against PostgreSQL with the
+    /// pgvector type mapping enabled. Used by the hosts; the connection string is
+    /// supplied by Aspire. (Tests register the context themselves.)
+    /// </summary>
+    public static IServiceCollection AddDepRadarDbContext(this IServiceCollection services, string? connectionString)
+    {
+        services.AddDbContext<DepRadarDbContext>(options =>
+            options.UseNpgsql(connectionString, npgsql =>
+            {
+                npgsql.UseVector();
+                npgsql.EnableRetryOnFailure();
+            }));
+
+        return services;
+    }
+
+    // Wires Claude when an API key is present; otherwise a null model so the upgrade
+    // advisor falls back to a deterministic templated narrative (works keyless).
+    private static void AddLanguageModel(IServiceCollection services, string? apiKey, string? model)
+    {
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            services.AddSingleton<ILanguageModel, NullLanguageModel>();
+            return;
+        }
+
+        services.AddSingleton(new AnthropicOptions(string.IsNullOrWhiteSpace(model) ? DefaultAnthropicModel : model));
+        services.AddHttpClient<ILanguageModel, AnthropicLanguageModel>(client =>
+            {
+                client.BaseAddress = new Uri("https://api.anthropic.com/");
+                client.DefaultRequestHeaders.Add("x-api-key", apiKey);
+                client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+            })
+            .AddStandardResilienceHandler();
     }
 }

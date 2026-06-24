@@ -11,15 +11,17 @@ var builder = WebApplication.CreateBuilder(args);
 // Aspire service defaults: OpenTelemetry, health checks, service discovery, resilience.
 builder.AddServiceDefaults();
 
-// DbContext via the Aspire integration. The "depradardb" connection string is
-// supplied by the AppHost; health checks, connection retries and telemetry come
-// bundled with the integration.
-builder.AddNpgsqlDbContext<DepRadarDbContext>("depradardb");
+// DbContext with the pgvector mapping enabled. The "depradardb" connection string
+// is supplied by the AppHost via Aspire's service reference.
+builder.Services.AddDepRadarDbContext(builder.Configuration.GetConnectionString("depradardb"));
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(
     builder.Configuration["DepsDev:BaseUrl"],
-    builder.Configuration["NuGet:BaseUrl"]);
+    builder.Configuration["NuGet:BaseUrl"],
+    builder.Configuration["Osv:BaseUrl"],
+    builder.Configuration["Anthropic:ApiKey"],
+    builder.Configuration["Anthropic:Model"]);
 
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();

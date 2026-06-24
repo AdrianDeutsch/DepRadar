@@ -53,10 +53,11 @@ has: **"Is this upgrade worth it — and how risky is it?"**
 - 🤖 **LLM upgrade advisor** — RAG over changelogs + risk data, plus a graph chatbot.
 - ⚡ **Live updates** — SignalR streams scan progress in real time.
 
-> Slices 1–3 are shipped: an async, durable scan resolves a package's **full
+> Slices 1–4 are shipped: an async, durable scan resolves a package's **full
 > transitive graph** from NuGet, scores every node for **security (OSV), license,
-> license-shift and maintenance** risk, and serves an explainable health report over
-> the API. The remaining items are the target picture; see the [roadmap](#roadmap).
+> license-shift and maintenance** risk, and an **LLM-ready upgrade advisor** answers
+> "is this upgrade worth it?" with **RAG over pgvector** and prompt-injection defense.
+> The remaining items are the target picture; see the [roadmap](#roadmap).
 
 ## Architecture
 
@@ -129,7 +130,7 @@ sequenceDiagram
 | Pipeline      | Worker Service + `System.Threading.Channels` | Ingestion decoupled from the API (Slice 2).                   |
 | Persistence   | PostgreSQL + EF Core 10                       | Graph as flat tables + recursive CTEs; `pgvector` for RAG.    |
 | CQRS          | **Hand-rolled mediator** (MIT)               | No commercially-licensed MediatR in the core ([ADR 0002]).    |
-| AI            | Microsoft Semantic Kernel (Slice 4)          | Changelog summaries, risk assessment, graph chat.             |
+| AI / RAG      | **pgvector** + `ILanguageModel` seam (Claude) | Keyless local embedder + RAG; Claude narrative behind a key ([ADR 0006]). |
 | Orchestration | .NET Aspire 13                               | Wires API + Worker + Postgres + telemetry.                    |
 | Resilience    | `Microsoft.Extensions.Http.Resilience`       | Retry, circuit breaker, timeout, rate limiter on every call.  |
 | Observability | OpenTelemetry (via Aspire)                   | Traces, metrics, logs.                                        |
@@ -163,6 +164,9 @@ curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/graph
 # Risk report for the package, and the project-level rollup (worst first)
 curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/risk
 curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/graph/risk
+
+# "Is this upgrade worth it?" — RAG over changelogs + risk (from/to optional)
+curl "http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/upgrade?from=5.0.0&to=6.0.0"
 ```
 
 The interactive API reference is at `/scalar/v1`.
@@ -188,6 +192,27 @@ The interactive API reference is at `/scalar/v1`.
    license, license-shift, maintenance) and an additive health score.
 6. `GET /api/packages/{id}/graph` returns the transitive closure (recursive CTE);
    `GET /api/packages/{id}/risk` and `…/graph/risk` return the scored report.
+7. `GET /api/packages/{id}/upgrade` answers "is this upgrade worth it?": it embeds the
+   query, retrieves similar changelog chunks from **pgvector**, builds a
+   prompt-injection-shielded prompt, and returns a deterministic recommendation plus an
+   LLM (or templated) narrative.
+
+### AI security — prompt injection
+
+Changelogs and release notes are **untrusted, attacker-controllable input**. Before any
+text reaches the model, `PromptShield` applies layered defenses (see [ADR 0006]):
+
+- **Input separation** — untrusted text is fenced in unique delimiters; any occurrence
+  of those delimiters inside the text is stripped so it cannot break out of the fence.
+- **Explicit instruction** — the system prompt declares the fenced block to be *data,
+  never instructions*, and forbids following or revealing instructions found inside it.
+- **Output constraints** — the model must answer only the upgrade question, concisely,
+  ending in a fixed verdict token.
+- **No authority delegated** — the recommendation itself is computed deterministically
+  from risk data; the LLM only writes the narrative.
+
+The advisor works **keyless** (local embedder + templated narrative); set
+`Anthropic:ApiKey` (User Secrets) to enable the live Claude narrative.
 
 The graph is stored as **flat tables** (`packages`, `package_versions`,
 `dependency_edges`, `scans`) so the transitive closure never materializes unbounded
@@ -197,9 +222,9 @@ object navigation.
 
 | Kind                    | Tooling                              | What it proves                                          |
 | ----------------------- | ------------------------------------ | ------------------------------------------------------- |
-| Unit                    | xUnit v3 + Shouldly                  | Domain logic — SemVer precedence, id normalization, **risk scoring**. |
+| Unit                    | xUnit v3 + Shouldly                  | Domain logic — SemVer precedence, **risk scoring**, **prompt-injection shield**. |
 | Architecture            | NetArchTest                          | Layer boundaries hold; **MediatR & NuGet.Versioning** stay out of the core. |
-| Integration             | Testcontainers + **real PostgreSQL** | EF mappings, idempotent graph upserts, recursive-CTE closure, **risk rollup**. |
+| Integration             | Testcontainers + **real PostgreSQL/pgvector** | Idempotent graph upserts, recursive-CTE closure, risk rollup, **RAG retrieval**. |
 
 Quality gates: nullable reference types, `TreatWarningsAsErrors`,
 `AnalysisLevel=latest-recommended` (with a few deliberately-documented waivers),
@@ -221,8 +246,8 @@ dotnet test           # unit + architecture + integration (needs Docker)
       Channels worker pipeline, recursive-CTE graph API.
 - [x] **Slice 3 — Risk analysis:** OSV security scan, license + license-shift detection,
       maintenance signals, explainable per-package & project health scoring.
-- [ ] **Slice 3 — Risk analysis:** security, license, license-shift, maintenance + scoring.
-- [ ] **Slice 4 — LLM layer:** changelog RAG (`pgvector`), upgrade assessment, graph chat.
+- [x] **Slice 4 — LLM layer:** changelog RAG over **pgvector**, upgrade advisor, an
+      `ILanguageModel` seam (Claude behind a key), and prompt-injection defense.
 - [ ] **Slice 5 — Dashboard, SignalR live updates, report export.**
 - [ ] **Slice 6 — Hardening & presentation:** observability, caching, CI/CD, real demo assets.
 

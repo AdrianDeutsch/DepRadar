@@ -20,6 +20,7 @@ public sealed class RunScanHandler(
     IGraphRepository graphRepository,
     IVulnerabilitySource vulnerabilitySource,
     IRiskRepository riskRepository,
+    IChangelogIndexer changelogIndexer,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
     ILogger<RunScanHandler> logger)
@@ -50,6 +51,12 @@ public sealed class RunScanHandler(
             {
                 await PersistGraphAsync(graph, cancellationToken);
                 await AssessVulnerabilitiesAsync(graph, cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Build the RAG corpus from what we just learned (versions, license
+                // changes, advisories). Reads back the committed data above.
+                await changelogIndexer.IndexAsync(scan.RootPackageId, cancellationToken);
+
                 scan.Complete(graph.Nodes.Count, graph.Edges.Count, timeProvider.GetUtcNow());
                 logger.LogInformation(
                     "Scan {ScanId} for {Root} completed: {Nodes} package(s), {Edges} edge(s){Truncated}.",

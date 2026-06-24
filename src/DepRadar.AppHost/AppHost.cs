@@ -3,10 +3,10 @@
 // project (`dotnet run --project src/DepRadar.AppHost`) brings the whole system up.
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Ephemeral Postgres for Slice 1 (clean state each run); pgAdmin gives a quick
-// visual into the stored graph during a demo. A persistent data volume and the
-// pgvector image (for changelog RAG) are introduced in later slices.
+// Ephemeral Postgres on the pgvector image (the changelog RAG store needs the
+// `vector` extension); pgAdmin gives a quick visual into the stored graph.
 var postgres = builder.AddPostgres("postgres")
+    .WithImage("pgvector/pgvector", "pg17")
     .WithPgAdmin();
 
 var depRadarDb = postgres.AddDatabase("depradardb");

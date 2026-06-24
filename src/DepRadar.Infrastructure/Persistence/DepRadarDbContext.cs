@@ -32,10 +32,14 @@ public sealed class DepRadarDbContext(DbContextOptions<DepRadarDbContext> option
     /// <summary>Known security advisories per package version.</summary>
     public DbSet<PackageVulnerability> PackageVulnerabilities => Set<PackageVulnerability>();
 
+    /// <summary>Embedded changelog chunks for RAG.</summary>
+    public DbSet<ChangelogChunk> ChangelogChunks => Set<ChangelogChunk>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("depradar");
+        modelBuilder.HasPostgresExtension("vector");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(DepRadarDbContext).Assembly);
         base.OnModelCreating(modelBuilder);
     }

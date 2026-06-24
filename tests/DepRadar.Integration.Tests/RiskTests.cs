@@ -66,7 +66,7 @@ public sealed class RiskTests(PostgresFixture fixture) : IClassFixture<PostgresF
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddDbContext<DepRadarDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddDepRadarDbContext(connectionString);
         services.AddApplication();
         services.AddInfrastructure();
         services.AddScoped<IDependencyGraphResolver, StubGraphResolver>();

@@ -3,6 +3,7 @@ using DepRadar.Application.Messaging;
 using DepRadar.Application.Packages;
 using DepRadar.Application.Risk;
 using DepRadar.Application.Scans;
+using DepRadar.Application.Upgrades;
 
 namespace DepRadar.Api.Endpoints;
 
@@ -54,6 +55,12 @@ internal static class PackageEndpoints
             .Produces<GraphRiskDto>()
             .Produces(StatusCodes.Status404NotFound);
 
+        group.MapGet("/{id}/upgrade", GetUpgradeAsync)
+            .WithName("GetUpgradeAdvice")
+            .WithSummary("Assesses an upgrade (RAG over changelogs + risk); ?from= & ?to= optional.")
+            .Produces<UpgradeAdviceDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
         return app;
     }
 
@@ -91,5 +98,11 @@ internal static class PackageEndpoints
     {
         var risk = await sender.Send(new GetGraphRiskQuery(id), cancellationToken);
         return risk is null ? Results.NotFound() : Results.Ok(risk);
+    }
+
+    private static async Task<IResult> GetUpgradeAsync(string id, string? from, string? to, ISender sender, CancellationToken cancellationToken)
+    {
+        var advice = await sender.Send(new GetUpgradeAdviceQuery(id, from, to), cancellationToken);
+        return advice is null ? Results.NotFound() : Results.Ok(advice);
     }
 }

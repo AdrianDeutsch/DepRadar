@@ -70,7 +70,7 @@ public sealed class PackageIngestionTests(PostgresFixture fixture) : IClassFixtu
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddDbContext<DepRadarDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddDepRadarDbContext(connectionString);
         services.AddApplication();
         services.AddInfrastructure();
 
