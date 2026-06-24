@@ -48,7 +48,12 @@ internal sealed partial class NuGetClient(HttpClient httpClient)
                 continue;
             }
 
-            versions.Add(new NuGetVersionData(version, SelectRepresentativeDependencies(entry.DependencyGroups)));
+            var license = string.IsNullOrWhiteSpace(entry.LicenseExpression) ? null : entry.LicenseExpression;
+            versions.Add(new NuGetVersionData(
+                version,
+                license,
+                entry.Deprecation is not null,
+                SelectRepresentativeDependencies(entry.DependencyGroups)));
         }
 
         return new NuGetPackageData(versions);
@@ -171,8 +176,12 @@ internal sealed partial class NuGetClient(HttpClient httpClient)
 /// <summary>All listed versions of a package with their declared dependencies.</summary>
 internal sealed record NuGetPackageData(IReadOnlyList<NuGetVersionData> Versions);
 
-/// <summary>One version and the dependencies of its representative framework group.</summary>
-internal sealed record NuGetVersionData(NuGetVersion Version, IReadOnlyList<NuGetDeclaredDependency> Dependencies);
+/// <summary>One version with its license, deprecation flag and representative dependencies.</summary>
+internal sealed record NuGetVersionData(
+    NuGetVersion Version,
+    string? License,
+    bool IsDeprecated,
+    IReadOnlyList<NuGetDeclaredDependency> Dependencies);
 
 /// <summary>A declared dependency: target id and the requested range (null = any).</summary>
 internal sealed record NuGetDeclaredDependency(string Id, string? Range);

@@ -29,6 +29,9 @@ public sealed class DepRadarDbContext(DbContextOptions<DepRadarDbContext> option
     /// <summary>The scan runs.</summary>
     public DbSet<Scan> Scans => Set<Scan>();
 
+    /// <summary>Known security advisories per package version.</summary>
+    public DbSet<PackageVulnerability> PackageVulnerabilities => Set<PackageVulnerability>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

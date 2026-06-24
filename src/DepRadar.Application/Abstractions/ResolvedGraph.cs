@@ -19,8 +19,25 @@ public sealed record ResolvedGraph(
     IReadOnlyList<ResolvedEdge> Edges,
     bool Truncated);
 
-/// <summary>A package version that participates in the graph.</summary>
-public sealed record ResolvedNode(PackageId Id, SemVer Version, bool IsRoot);
+/// <summary>
+/// A package version that participates in the graph, with the risk-relevant facts
+/// captured at resolution time (cheap — they come from the same NuGet metadata).
+/// </summary>
+/// <param name="Id">The package id.</param>
+/// <param name="Version">The resolved version.</param>
+/// <param name="IsRoot">Whether this is the root of the scan.</param>
+/// <param name="License">SPDX license of the resolved version, if declared.</param>
+/// <param name="IsDeprecated">Whether the resolved version is deprecated on NuGet.</param>
+/// <param name="LatestStableVersion">The package's latest stable version, if any.</param>
+/// <param name="LatestLicense">SPDX license of the latest stable version, if declared.</param>
+public sealed record ResolvedNode(
+    PackageId Id,
+    SemVer Version,
+    bool IsRoot,
+    string? License,
+    bool IsDeprecated,
+    SemVer? LatestStableVersion,
+    string? LatestLicense);
 
 /// <summary>
 /// A resolved dependency: <paramref name="FromId"/>@<paramref name="FromVersion"/>

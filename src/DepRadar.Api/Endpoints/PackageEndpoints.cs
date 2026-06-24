@@ -1,6 +1,7 @@
 using DepRadar.Application.Graphs;
 using DepRadar.Application.Messaging;
 using DepRadar.Application.Packages;
+using DepRadar.Application.Risk;
 using DepRadar.Application.Scans;
 
 namespace DepRadar.Api.Endpoints;
@@ -41,6 +42,18 @@ internal static class PackageEndpoints
             .Produces<PackageGraphDto>()
             .Produces(StatusCodes.Status404NotFound);
 
+        group.MapGet("/{id}/risk", GetRiskAsync)
+            .WithName("GetPackageRisk")
+            .WithSummary("Returns the health score and findings for a package.")
+            .Produces<PackageRiskDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id}/graph/risk", GetGraphRiskAsync)
+            .WithName("GetPackageGraphRisk")
+            .WithSummary("Returns the project-level risk across the transitive graph (worst first).")
+            .Produces<GraphRiskDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
         return app;
     }
 
@@ -66,5 +79,17 @@ internal static class PackageEndpoints
     {
         var graph = await sender.Send(new GetPackageGraphQuery(id), cancellationToken);
         return graph is null ? Results.NotFound() : Results.Ok(graph);
+    }
+
+    private static async Task<IResult> GetRiskAsync(string id, ISender sender, CancellationToken cancellationToken)
+    {
+        var risk = await sender.Send(new GetPackageRiskQuery(id), cancellationToken);
+        return risk is null ? Results.NotFound() : Results.Ok(risk);
+    }
+
+    private static async Task<IResult> GetGraphRiskAsync(string id, ISender sender, CancellationToken cancellationToken)
+    {
+        var risk = await sender.Send(new GetGraphRiskQuery(id), cancellationToken);
+        return risk is null ? Results.NotFound() : Results.Ok(risk);
     }
 }

@@ -9,14 +9,17 @@ namespace DepRadar.Application.Scans;
 
 /// <summary>
 /// Handles <see cref="RunScanCommand"/>: drives one scan from <c>Queued</c> to
-/// <c>Completed</c> (or <c>Failed</c>). Resolves the transitive graph, maps it to the
-/// domain and persists it idempotently. Already-finished scans are a no-op so the
-/// worker can safely re-deliver.
+/// <c>Completed</c> (or <c>Failed</c>). Resolves the transitive graph, persists it
+/// idempotently together with per-version license/deprecation, and assesses each
+/// node for known vulnerabilities. Already-finished scans are a no-op so the worker
+/// can safely re-deliver.
 /// </summary>
 public sealed class RunScanHandler(
     IScanRepository scanRepository,
     IDependencyGraphResolver resolver,
     IGraphRepository graphRepository,
+    IVulnerabilitySource vulnerabilitySource,
+    IRiskRepository riskRepository,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
     ILogger<RunScanHandler> logger)
@@ -45,7 +48,8 @@ public sealed class RunScanHandler(
             }
             else
             {
-                await PersistAsync(graph, cancellationToken);
+                await PersistGraphAsync(graph, cancellationToken);
+                await AssessVulnerabilitiesAsync(graph, cancellationToken);
                 scan.Complete(graph.Nodes.Count, graph.Edges.Count, timeProvider.GetUtcNow());
                 logger.LogInformation(
                     "Scan {ScanId} for {Root} completed: {Nodes} package(s), {Edges} edge(s){Truncated}.",
@@ -69,16 +73,33 @@ public sealed class RunScanHandler(
     }
 
     /// <summary>Maps the resolved graph to domain entities and persists it idempotently.</summary>
-    private async Task PersistAsync(ResolvedGraph graph, CancellationToken cancellationToken)
+    private async Task PersistGraphAsync(ResolvedGraph graph, CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
 
         var packages = graph.Nodes
-            .Select(node => Package.Create(node.Id, now))
+            .Select(node =>
+            {
+                var package = Package.Create(node.Id, now);
+                package.Refresh(
+                    description: null,
+                    projectUrl: null,
+                    sourceRepositoryUrl: null,
+                    license: ParseLicense(node.LatestLicense),
+                    isDeprecated: node.IsDeprecated,
+                    latestStableVersion: node.LatestStableVersion,
+                    timestamp: now);
+                return package;
+            })
             .ToList();
 
         var versions = graph.Nodes
-            .Select(node => PackageVersion.Create(node.Id, node.Version))
+            .Select(node => PackageVersion.Create(
+                node.Id,
+                node.Version,
+                publishedAt: null,
+                isDeprecated: node.IsDeprecated,
+                license: ParseLicense(node.License)))
             .ToList();
 
         var edges = graph.Edges
@@ -93,4 +114,29 @@ public sealed class RunScanHandler(
 
         await graphRepository.UpsertGraphAsync(packages, versions, edges, cancellationToken);
     }
+
+    /// <summary>Queries the vulnerability source for every node and stores the advisories.</summary>
+    private async Task AssessVulnerabilitiesAsync(ResolvedGraph graph, CancellationToken cancellationToken)
+    {
+        var vulnerabilities = new List<PackageVulnerability>();
+        foreach (var node in graph.Nodes)
+        {
+            var advisories = await vulnerabilitySource.GetAsync(node.Id, node.Version, cancellationToken);
+            vulnerabilities.AddRange(advisories.Select(advisory => PackageVulnerability.Create(
+                node.Id,
+                node.Version,
+                advisory.AdvisoryId,
+                advisory.Severity,
+                advisory.Summary,
+                advisory.Source)));
+        }
+
+        if (vulnerabilities.Count > 0)
+        {
+            await riskRepository.UpsertVulnerabilitiesAsync(vulnerabilities, cancellationToken);
+        }
+    }
+
+    private static SpdxLicense? ParseLicense(string? raw) =>
+        string.IsNullOrWhiteSpace(raw) ? null : SpdxLicense.Create(raw);
 }

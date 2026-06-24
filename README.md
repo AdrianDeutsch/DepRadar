@@ -53,9 +53,10 @@ has: **"Is this upgrade worth it — and how risky is it?"**
 - 🤖 **LLM upgrade advisor** — RAG over changelogs + risk data, plus a graph chatbot.
 - ⚡ **Live updates** — SignalR streams scan progress in real time.
 
-> Slices 1–2 are shipped: an async, durable scan resolves a package's **full
-> transitive graph** from NuGet, persists it idempotently in Postgres, and serves it
-> over the API. The feature list above is the target picture; see the [roadmap](#roadmap).
+> Slices 1–3 are shipped: an async, durable scan resolves a package's **full
+> transitive graph** from NuGet, scores every node for **security (OSV), license,
+> license-shift and maintenance** risk, and serves an explainable health report over
+> the API. The remaining items are the target picture; see the [roadmap](#roadmap).
 
 ## Architecture
 
@@ -158,6 +159,10 @@ curl http://localhost:<api-port>/api/scans/<scan-id>
 
 # Read the resolved transitive dependency graph
 curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/graph
+
+# Risk report for the package, and the project-level rollup (worst first)
+curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/risk
+curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/graph/risk
 ```
 
 The interactive API reference is at `/scalar/v1`.
@@ -177,8 +182,12 @@ The interactive API reference is at `/scalar/v1`.
    `NuGet.Versioning`, Infrastructure-only), bounded by a node cap.
 4. Packages, versions and **dependency edges are upserted idempotently** — re-running
    a scan never duplicates rows.
-5. `GET /api/packages/{id}/graph` returns the transitive closure, computed with a
-   **recursive CTE** over the flat `dependency_edges` table.
+5. During the scan each node is also scored: **OSV.dev** is queried for advisories,
+   while license + deprecation come from the NuGet catalog already fetched. A pure
+   `PackageRiskScorer` turns these signals into explainable findings (security,
+   license, license-shift, maintenance) and an additive health score.
+6. `GET /api/packages/{id}/graph` returns the transitive closure (recursive CTE);
+   `GET /api/packages/{id}/risk` and `…/graph/risk` return the scored report.
 
 The graph is stored as **flat tables** (`packages`, `package_versions`,
 `dependency_edges`, `scans`) so the transitive closure never materializes unbounded
@@ -188,9 +197,9 @@ object navigation.
 
 | Kind                    | Tooling                              | What it proves                                          |
 | ----------------------- | ------------------------------------ | ------------------------------------------------------- |
-| Unit                    | xUnit v3 + Shouldly                  | Domain logic — SemVer precedence, id normalization.     |
-| Architecture            | NetArchTest                          | Layer boundaries hold; **MediatR never appears**.       |
-| Integration             | Testcontainers + **real PostgreSQL** | EF mappings, value conversions, idempotent graph upserts, recursive-CTE closure. |
+| Unit                    | xUnit v3 + Shouldly                  | Domain logic — SemVer precedence, id normalization, **risk scoring**. |
+| Architecture            | NetArchTest                          | Layer boundaries hold; **MediatR & NuGet.Versioning** stay out of the core. |
+| Integration             | Testcontainers + **real PostgreSQL** | EF mappings, idempotent graph upserts, recursive-CTE closure, **risk rollup**. |
 
 Quality gates: nullable reference types, `TreatWarningsAsErrors`,
 `AnalysisLevel=latest-recommended` (with a few deliberately-documented waivers),
@@ -210,7 +219,8 @@ dotnet test           # unit + architecture + integration (needs Docker)
       Aspire, one integration test and architecture tests.
 - [x] **Slice 2 — Transitive graph:** async durable scans, NuGet range resolution,
       Channels worker pipeline, recursive-CTE graph API.
-- [ ] **Slice 3 — Risk analysis:** security, license, license-shift, maintenance + scoring.
+- [x] **Slice 3 — Risk analysis:** OSV security scan, license + license-shift detection,
+      maintenance signals, explainable per-package & project health scoring.
 - [ ] **Slice 3 — Risk analysis:** security, license, license-shift, maintenance + scoring.
 - [ ] **Slice 4 — LLM layer:** changelog RAG (`pgvector`), upgrade assessment, graph chat.
 - [ ] **Slice 5 — Dashboard, SignalR live updates, report export.**

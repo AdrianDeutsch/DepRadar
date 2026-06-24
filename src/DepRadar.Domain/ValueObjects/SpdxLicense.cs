@@ -22,6 +22,13 @@ public readonly record struct SpdxLicense
         "MPL-2.0", "MS-PL", "Unlicense", "0BSD",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
+    // Permissive SPDX ids (no family prefix that Classify already covers).
+    private static readonly FrozenSet<string> Permissive = new[]
+    {
+        "MIT", "MIT-0", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC",
+        "MS-PL", "0BSD", "Unlicense", "Zlib", "BSL-1.0", "Apache-1.1", "PostgreSQL",
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
     private SpdxLicense(string identifier, bool isRecognized)
     {
         Identifier = identifier;
@@ -33,6 +40,31 @@ public readonly record struct SpdxLicense
 
     /// <summary><see langword="true"/> when the identifier matches the curated SPDX subset.</summary>
     public bool IsRecognized { get; }
+
+    /// <summary>
+    /// Classifies the license by risk family. Matching is by SPDX family prefix so
+    /// versioned ids (e.g. <c>GPL-3.0-only</c>) are covered without an exhaustive list.
+    /// </summary>
+    public LicenseCategory Classify()
+    {
+        var id = Identifier.ToUpperInvariant();
+
+        if (id.StartsWith("AGPL", StringComparison.Ordinal) || id.StartsWith("GPL", StringComparison.Ordinal))
+        {
+            return LicenseCategory.Copyleft;
+        }
+
+        if (id.StartsWith("LGPL", StringComparison.Ordinal)
+            || id.StartsWith("MPL", StringComparison.Ordinal)
+            || id.StartsWith("EPL", StringComparison.Ordinal)
+            || id.StartsWith("CDDL", StringComparison.Ordinal)
+            || id.StartsWith("MS-RL", StringComparison.Ordinal))
+        {
+            return LicenseCategory.WeakCopyleft;
+        }
+
+        return Permissive.Contains(Identifier) ? LicenseCategory.Permissive : LicenseCategory.Unknown;
+    }
 
     /// <summary>Creates a license value from an SPDX identifier or expression.</summary>
     /// <exception cref="ArgumentException">The identifier is empty.</exception>

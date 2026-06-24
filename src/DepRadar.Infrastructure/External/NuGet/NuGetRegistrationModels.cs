@@ -19,11 +19,16 @@ internal sealed record NuGetRegistrationPage(
 /// <summary>A registration leaf wrapping the catalog entry for one version.</summary>
 internal sealed record NuGetRegistrationLeaf(NuGetCatalogEntry? CatalogEntry);
 
-/// <summary>The per-version catalog entry with declared dependencies.</summary>
+/// <summary>The per-version catalog entry with declared dependencies, license and deprecation.</summary>
 internal sealed record NuGetCatalogEntry(
     string? Version,
     bool? Listed,
+    string? LicenseExpression,
+    NuGetDeprecation? Deprecation,
     IReadOnlyList<NuGetDependencyGroup>? DependencyGroups);
+
+/// <summary>Present (non-null) only when the version is deprecated.</summary>
+internal sealed record NuGetDeprecation(IReadOnlyList<string>? Reasons);
 
 /// <summary>Declared dependencies for one target framework.</summary>
 internal sealed record NuGetDependencyGroup(

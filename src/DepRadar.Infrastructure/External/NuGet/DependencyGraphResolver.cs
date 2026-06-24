@@ -42,7 +42,7 @@ internal sealed class DependencyGraphResolver(NuGetClient nuGetClient, ILogger<D
         var queue = new Queue<(PackageId Id, NuGetVersion Version, SemVer SemVer)>();
         var truncated = false;
 
-        nodes.Add(new ResolvedNode(root, rootVersion, IsRoot: true));
+        nodes.Add(BuildNode(root, rootNuGetVersion, rootVersion, rootData, isRoot: true));
         visited.Add((root.Value, rootNuGetVersion.ToNormalizedString()));
         queue.Enqueue((root, rootNuGetVersion, rootVersion));
 
@@ -96,7 +96,7 @@ internal sealed class DependencyGraphResolver(NuGetClient nuGetClient, ILogger<D
                     continue;
                 }
 
-                nodes.Add(new ResolvedNode(dependencyId, resolvedSemVer, IsRoot: false));
+                nodes.Add(BuildNode(dependencyId, resolved, resolvedSemVer, dependencyData, isRoot: false));
                 queue.Enqueue((dependencyId, resolved, resolvedSemVer));
             }
         }
@@ -125,6 +125,37 @@ internal sealed class DependencyGraphResolver(NuGetClient nuGetClient, ILogger<D
         var data = await nuGetClient.GetPackageDataAsync(id, cancellationToken);
         cache[id.Value] = data;
         return data;
+    }
+
+    /// <summary>Builds a graph node with the risk-relevant facts for its version.</summary>
+    private static ResolvedNode BuildNode(PackageId id, NuGetVersion nuGetVersion, SemVer version, NuGetPackageData data, bool isRoot)
+    {
+        var versionData = data.Versions.FirstOrDefault(v => v.Version.Equals(nuGetVersion));
+        var (latestStable, latestLicense) = ComputeLatestFacts(data);
+
+        return new ResolvedNode(
+            id,
+            version,
+            isRoot,
+            License: versionData?.License,
+            IsDeprecated: versionData?.IsDeprecated ?? false,
+            LatestStableVersion: latestStable,
+            LatestLicense: latestLicense);
+    }
+
+    /// <summary>The latest stable version and its license (for license-shift detection).</summary>
+    private static (SemVer? Version, string? License) ComputeLatestFacts(NuGetPackageData data)
+    {
+        var stable = data.Versions.Where(v => !v.Version.IsPrerelease).ToList();
+        IReadOnlyList<NuGetVersionData> pool = stable.Count > 0 ? stable : data.Versions;
+
+        var latest = pool.MaxBy(v => v.Version);
+        if (latest is null || !SemVer.TryParse(latest.Version.ToNormalizedString(), out var version))
+        {
+            return (null, null);
+        }
+
+        return (version, latest.License);
     }
 
     /// <summary>Highest stable listed version, falling back to the highest overall.</summary>
