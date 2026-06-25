@@ -1,4 +1,5 @@
 using DepRadar.Application.Chat;
+using DepRadar.Application.Diff;
 using DepRadar.Application.Graphs;
 using DepRadar.Application.Messaging;
 using DepRadar.Application.Packages;
@@ -82,6 +83,13 @@ internal static class PackageEndpoints
             .Produces<ChatAnswerDto>()
             .Produces(StatusCodes.Status404NotFound);
 
+        group.MapGet("/{id}/diff", GetDiffAsync)
+            .WithName("GetUpgradeDiff")
+            .WithSummary("Diffs the resolved graph and risk between two versions (upgrade impact).")
+            .Produces<UpgradeDiff>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound);
+
         return app;
     }
 
@@ -143,5 +151,16 @@ internal static class PackageEndpoints
     {
         var answer = await sender.Send(new AskGraphQuestionQuery(id, request.Question), cancellationToken);
         return answer is null ? Results.NotFound() : Results.Ok(answer);
+    }
+
+    private static async Task<IResult> GetDiffAsync(string id, string? from, string? to, ISender sender, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(to))
+        {
+            return Results.BadRequest("Both 'from' and 'to' version query parameters are required.");
+        }
+
+        var diff = await sender.Send(new GetUpgradeDiffQuery(id, from, to), cancellationToken);
+        return diff is null ? Results.NotFound() : Results.Ok(diff);
     }
 }

@@ -28,12 +28,17 @@
     <td width="50%"><img src="docs/assets/dashboard.png" alt="Risk dashboard with dependency graph" /></td>
     <td width="50%"><img src="docs/assets/risk.png" alt="Risk findings and upgrade advice for a risky package" /></td>
   </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/diff.png" alt="Upgrade-impact diff clearing a CVE" /></td>
+    <td width="50%"><img src="docs/assets/graph.png" alt="A larger transitive dependency graph" /></td>
+  </tr>
 </table>
 
-> Captured live: a healthy 24-package graph (left) and a deprecated/archived package
-> flagged across security, license and maintenance — with an upgrade verdict, an SBOM
-> download and a natural-language "ask the graph" answer (right). The dashboard
-> deep-links to any scanned package via `/?package=<id>`.
+> Captured live: a healthy 24-package graph and a deprecated/archived package flagged
+> across security, license and maintenance — with an upgrade verdict, an SBOM download
+> and a natural-language "ask the graph" answer. Bottom-left, the **upgrade-impact diff**
+> shows Newtonsoft 12.0.3 → 13.0.3 clearing a CVE for **+30 health**. The dashboard
+> deep-links to any scanned package via `/?package=<id>` (and `&ask=` / `&diff=`).
 
 ## Problem & solution
 
@@ -59,6 +64,10 @@ has: **"Is this upgrade worth it — and how risky is it?"**
   licenses, CVEs and the dependency graph).
 - 💬 **Ask the graph** — natural-language questions ("which packages are unmaintained?")
   answered over your dependency graph, deterministically (LLM optional).
+- 🔀 **Upgrade-impact diff** — compare two versions: added/removed dependencies, version
+  changes, and the CVEs an upgrade introduces *or clears* (e.g. Newtonsoft 12 → 13 = +30 health).
+- 🧰 **CLI / CI gate** — `depradar scan` as a `dotnet tool` runs the **whole analysis
+  standalone** (no server, no database) and **fails the build** on policy violations.
 - ⚡ **Live updates** — SignalR streams scan progress in real time.
 
 > **All six slices are shipped.** An async, durable scan resolves a package's **full
@@ -77,9 +86,10 @@ Clean Architecture with a strictly **inward** dependency direction, enforced in 
 
 ```mermaid
 flowchart TB
-    subgraph P["Presentation — Aspire AppHost orchestrates"]
+    subgraph P["Presentation — three hosts on one core"]
         API["Web API (Minimal API + Scalar)"]
         WK["Worker (Channels pipeline · Slice 2)"]
+        CLI["CLI (dotnet tool · stateless, DB-free)"]
     end
     subgraph I["Infrastructure"]
         EF["EF Core 10 · PostgreSQL"]
@@ -95,6 +105,7 @@ flowchart TB
 
     API --> UC
     WK --> UC
+    CLI --> UC
     UC --> PORTS
     UC --> MODEL
     EF -. implements .-> PORTS
@@ -189,7 +200,29 @@ curl -X POST http://localhost:<api-port>/api/projects/scan \
 curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/sbom
 curl -X POST http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/chat \
   -H "Content-Type: application/json" -d '{"question":"which packages are unmaintained?"}'
+
+# Upgrade-impact diff — what does moving 12.0.3 → 13.0.3 add, remove, break or fix?
+curl "http://localhost:<api-port>/api/packages/Newtonsoft.Json/diff?from=12.0.3&to=13.0.3"
 ```
+
+### CLI — scan and gate a build, with no server or database
+
+`depradar` is a `dotnet tool` that runs the **entire analysis in-process** against the
+live NuGet/OSV/GitHub data, so it works standalone in CI:
+
+```bash
+dotnet pack src/DepRadar.Cli -o ./artifacts/nupkg
+dotnet tool install --global --add-source ./artifacts/nupkg DepRadar.Tool
+
+# Scan a package or a whole project; exit code 1 fails the build on a policy breach
+depradar scan WindowsAzure.Storage --fail-on high --no-deprecated
+depradar scan ./MyApp.csproj --forbid copyleft --sbom sbom.json
+
+# Compare two versions
+depradar diff Newtonsoft.Json 12.0.3 13.0.3
+```
+
+Exit codes: `0` policy passed · `1` policy violated · `2` usage error.
 
 The **dashboard** is served at the API root (`/`): enter a package (or paste a whole
 `.csproj`), watch the scan progress live over SignalR, then explore the graph, the
@@ -285,6 +318,9 @@ dotnet test           # unit + architecture + integration (needs Docker)
       **SignalR** live scan progress, and a Markdown audit report export.
 - [x] **Slice 6 — Hardening:** HybridCache for external responses, EF Core migrations
       (incl. pgvector), a stale-scan reaper, custom OpenTelemetry, and a DB health check.
+- [x] **Beyond the slices:** whole-project scan, **CycloneDX SBOM**, graph **chatbot**,
+      **upgrade-impact diff**, and a **`dotnet tool` CLI + policy gate** that runs the
+      whole analysis standalone for CI ([ADR 0009]).
 
 ## License & credits
 
@@ -298,3 +334,4 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0002]: docs/adr/0002-handrolled-mediator.md
 [ADR 0006]: docs/adr/0006-llm-rag-and-injection-defense.md
 [ADR 0008]: docs/adr/0008-production-hardening.md
+[ADR 0009]: docs/adr/0009-stateless-analysis-cli-and-policy.md

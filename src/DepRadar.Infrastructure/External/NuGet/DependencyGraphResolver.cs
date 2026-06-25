@@ -20,7 +20,7 @@ internal sealed class DependencyGraphResolver(NuGetClient nuGetClient, ILogger<D
     private const int MaxNodes = 200;
 
     /// <inheritdoc />
-    public async Task<ResolvedGraph?> ResolveAsync(PackageId root, CancellationToken cancellationToken)
+    public async Task<ResolvedGraph?> ResolveAsync(PackageId root, SemVer? pinnedVersion, CancellationToken cancellationToken)
     {
         var cache = new Dictionary<string, NuGetPackageData?>(StringComparer.Ordinal);
 
@@ -30,8 +30,8 @@ internal sealed class DependencyGraphResolver(NuGetClient nuGetClient, ILogger<D
             return null;
         }
 
-        var rootNuGetVersion = SelectRootVersion(rootData);
-        if (!SemVer.TryParse(rootNuGetVersion.ToNormalizedString(), out var rootVersion))
+        var rootNuGetVersion = SelectRootVersion(rootData, pinnedVersion);
+        if (rootNuGetVersion is null || !SemVer.TryParse(rootNuGetVersion.ToNormalizedString(), out var rootVersion))
         {
             return null;
         }
@@ -158,9 +158,21 @@ internal sealed class DependencyGraphResolver(NuGetClient nuGetClient, ILogger<D
         return (version, latest.License);
     }
 
-    /// <summary>Highest stable listed version, falling back to the highest overall.</summary>
-    private static NuGetVersion SelectRootVersion(NuGetPackageData data)
+    /// <summary>
+    /// The pinned version when requested (or <see langword="null"/> if it is not
+    /// published), otherwise the highest stable listed version, falling back to the
+    /// highest overall.
+    /// </summary>
+    private static NuGetVersion? SelectRootVersion(NuGetPackageData data, SemVer? pinnedVersion)
     {
+        if (pinnedVersion is not null)
+        {
+            var requested = pinnedVersion.ToString();
+            return data.Versions
+                .Select(v => v.Version)
+                .FirstOrDefault(v => string.Equals(v.ToNormalizedString(), requested, StringComparison.OrdinalIgnoreCase));
+        }
+
         var stable = data.Versions.Where(v => !v.Version.IsPrerelease).Select(v => v.Version).ToList();
         var pool = stable.Count > 0 ? stable : data.Versions.Select(v => v.Version).ToList();
         return pool.Max()!;

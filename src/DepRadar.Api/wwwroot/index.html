@@ -89,6 +89,17 @@
       </div>
 
       <div class="panel">
+        <div class="panel-head"><h2>Upgrade impact</h2></div>
+        <div class="diff-input">
+          <input id="diffFrom" type="text" placeholder="from version, e.g. 12.0.3" autocomplete="off" />
+          <span class="diff-arrow">→</span>
+          <input id="diffTo" type="text" placeholder="to version, e.g. 13.0.3" autocomplete="off" />
+          <button id="diffButton">Compare</button>
+        </div>
+        <div id="diffResult" class="diff-result"></div>
+      </div>
+
+      <div class="panel">
         <div class="panel-head"><h2>Ask the graph</h2></div>
         <div class="chat-input">
           <input id="chatInput" type="text" placeholder="e.g. which packages are deprecated?" autocomplete="off" />

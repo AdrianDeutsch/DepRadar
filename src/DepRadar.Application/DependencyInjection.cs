@@ -18,6 +18,7 @@ public static class DependencyInjection
         // the ambient request/work scope rather than the root provider.
         services.AddScoped<ISender, Mediator>();
         services.AddScoped<Risk.GraphAssessmentLoader>();
+        services.AddScoped<Analysis.ProjectAnalyzer>();
         services.TryAddSingleton(TimeProvider.System);
 
         RegisterHandlers(services);

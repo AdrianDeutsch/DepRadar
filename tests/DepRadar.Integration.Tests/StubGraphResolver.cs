@@ -17,9 +17,9 @@ namespace DepRadar.Integration.Tests;
 /// </summary>
 internal sealed class StubGraphResolver : IDependencyGraphResolver
 {
-    public Task<ResolvedGraph?> ResolveAsync(PackageId root, CancellationToken cancellationToken)
+    public Task<ResolvedGraph?> ResolveAsync(PackageId root, SemVer? pinnedVersion, CancellationToken cancellationToken)
     {
-        var rootVersion = SemVer.Parse("1.0.0");
+        var rootVersion = pinnedVersion ?? SemVer.Parse("1.0.0");
         var b = PackageId.Create("B");
         var bVersion = SemVer.Parse("2.0.0");
         var c = PackageId.Create("C");

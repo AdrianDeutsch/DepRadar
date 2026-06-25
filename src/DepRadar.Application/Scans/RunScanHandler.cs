@@ -47,7 +47,7 @@ public sealed class RunScanHandler(
 
         try
         {
-            var graph = await resolver.ResolveAsync(scan.RootPackageId, cancellationToken);
+            var graph = await resolver.ResolveAsync(scan.RootPackageId, pinnedVersion: null, cancellationToken);
             if (graph is null)
             {
                 scan.Fail($"Package '{scan.RootPackageId}' was not found on NuGet.", timeProvider.GetUtcNow());

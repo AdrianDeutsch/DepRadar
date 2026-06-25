@@ -16,6 +16,10 @@ const els = {
   chatInput: document.getElementById("chatInput"),
   chatButton: document.getElementById("chatButton"),
   chatAnswer: document.getElementById("chatAnswer"),
+  diffFrom: document.getElementById("diffFrom"),
+  diffTo: document.getElementById("diffTo"),
+  diffButton: document.getElementById("diffButton"),
+  diffResult: document.getElementById("diffResult"),
   projectToggle: document.getElementById("projectToggle"),
   projectPanel: document.getElementById("projectPanel"),
   projectInput: document.getElementById("projectInput"),
@@ -98,6 +102,9 @@ async function loadResults(pkg) {
   currentPackage = pkg;
   els.intro.classList.add("hidden");
   els.chatAnswer.innerHTML = "";
+  els.diffResult.innerHTML = "";
+  els.diffFrom.value = "";
+  els.diffTo.value = "";
   setStatus("Completed", "rendering report…");
 
   const [graph, risk, upgrade] = await Promise.all([
@@ -321,6 +328,53 @@ async function askChat(question) {
   }
 }
 
+els.diffButton.addEventListener("click", runDiff);
+[els.diffFrom, els.diffTo].forEach((el) =>
+  el.addEventListener("keydown", (e) => { if (e.key === "Enter") runDiff(); }));
+
+async function runDiff() {
+  const from = els.diffFrom.value.trim();
+  const to = els.diffTo.value.trim();
+  if (!from || !to || !currentPackage) return;
+  els.diffButton.disabled = true;
+  els.diffResult.innerHTML = "<span class='ai'>resolving both versions…</span>";
+  try {
+    const url = `/api/packages/${encodeURIComponent(currentPackage)}/diff`
+      + `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+    const res = await fetch(url);
+    if (res.status === 404) throw new Error("one of the versions could not be resolved");
+    if (!res.ok) throw new Error(`diff failed (${res.status})`);
+    renderDiff(await res.json());
+  } catch (err) {
+    els.diffResult.innerHTML = `<span class="ai" style="color:#f87171">${escapeHtml(err.message)}</span>`;
+  } finally {
+    els.diffButton.disabled = false;
+  }
+}
+
+function renderDiff(d) {
+  const delta = d.scoreDelta > 0 ? `+${d.scoreDelta}` : `${d.scoreDelta}`;
+  const deltaClass = d.scoreDelta > 0 ? "good" : d.scoreDelta < 0 ? "bad" : "";
+  const section = (title, items, cls) => items.length
+    ? `<div class="diff-sec"><span class="diff-title ${cls || ""}">${title} (${items.length})</span>`
+      + `<ul>${items.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul></div>`
+    : "";
+  const changes = d.changedPackages.map((c) => `${c.package} ${c.fromVersion} → ${c.toVersion}`);
+
+  els.diffResult.innerHTML =
+    `<div class="diff-head">${escapeHtml(d.fromVersion)} → ${escapeHtml(d.toVersion)} · `
+    + `health ${d.fromScore} (${d.fromLevel}) → ${d.toScore} (${d.toLevel}) `
+    + `<span class="diff-delta ${deltaClass}">${delta}</span></div>`
+    + section("New advisories", d.newAdvisories, "bad")
+    + section("Cleared advisories", d.resolvedAdvisories, "good")
+    + section("Added dependencies", d.addedPackages, "bad")
+    + section("Removed dependencies", d.removedPackages, "good")
+    + section("Version changes", changes, "")
+    + (d.newAdvisories.length + d.resolvedAdvisories.length + d.addedPackages.length
+       + d.removedPackages.length + changes.length === 0
+        ? "<div class='ai'>no graph or advisory changes</div>" : "");
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -342,6 +396,14 @@ function escapeHtml(value) {
     if (ask) {
       els.chatInput.value = ask;
       askChat(ask);
+    }
+    // Shareable upgrade diff: ?diff=<from>..<to> (e.g. diff=12.0.3..13.0.3)
+    const diff = params.get("diff");
+    if (diff && diff.includes("..")) {
+      const [from, to] = diff.split("..");
+      els.diffFrom.value = from;
+      els.diffTo.value = to;
+      runDiff();
     }
   });
 })();

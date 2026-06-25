@@ -10,8 +10,11 @@ namespace DepRadar.Application.Abstractions;
 public interface IDependencyGraphResolver
 {
     /// <summary>
-    /// Resolves the graph rooted at <paramref name="root"/> (at its latest stable
-    /// version), or <see langword="null"/> if the package does not exist on NuGet.
+    /// Resolves the graph rooted at <paramref name="root"/>. When
+    /// <paramref name="pinnedVersion"/> is supplied that exact root version is used
+    /// (for upgrade-impact diffs); otherwise the latest stable version is chosen.
+    /// Returns <see langword="null"/> if the package — or the pinned version — does
+    /// not exist on NuGet.
     /// </summary>
-    Task<ResolvedGraph?> ResolveAsync(PackageId root, CancellationToken cancellationToken);
+    Task<ResolvedGraph?> ResolveAsync(PackageId root, SemVer? pinnedVersion, CancellationToken cancellationToken);
 }

@@ -3,6 +3,7 @@
     <Project Path="src/DepRadar.Api/DepRadar.Api.csproj" />
     <Project Path="src/DepRadar.AppHost/DepRadar.AppHost.csproj" />
     <Project Path="src/DepRadar.Application/DepRadar.Application.csproj" />
+    <Project Path="src/DepRadar.Cli/DepRadar.Cli.csproj" />
     <Project Path="src/DepRadar.Domain/DepRadar.Domain.csproj" />
     <Project Path="src/DepRadar.Infrastructure/DepRadar.Infrastructure.csproj" />
     <Project Path="src/DepRadar.ServiceDefaults/DepRadar.ServiceDefaults.csproj" />

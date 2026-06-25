@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>DepRadar.Cli</RootNamespace>
+
+    <!-- Packaged as a .NET global tool: `dotnet tool install ... && depradar scan ...`.
+         The CLI runs the stateless analyzer, so it needs no server and no database. -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>depradar</ToolCommandName>
+    <PackageId>DepRadar.Tool</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Adrian Deutsch</Authors>
+    <Description>Dependency-health CLI: scan a package or project and fail CI on policy violations.</Description>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)../../artifacts/nupkg</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DepRadar.Application\DepRadar.Application.csproj" />
+    <ProjectReference Include="..\DepRadar.Infrastructure\DepRadar.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

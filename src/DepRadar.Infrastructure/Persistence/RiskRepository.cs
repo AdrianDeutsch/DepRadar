@@ -13,7 +13,7 @@ namespace DepRadar.Infrastructure.Persistence;
 internal sealed class RiskRepository(DepRadarDbContext dbContext, TimeProvider timeProvider) : IRiskRepository
 {
     // A repository with no commits for this long is treated as stale/abandoned.
-    private static readonly TimeSpan StaleThreshold = TimeSpan.FromDays(548); // ~18 months
+    private static readonly TimeSpan StaleThreshold = MaintenanceThresholds.StaleAfter;
 
     /// <inheritdoc />
     public async Task UpsertVulnerabilitiesAsync(IReadOnlyCollection<PackageVulnerability> vulnerabilities, CancellationToken cancellationToken)
