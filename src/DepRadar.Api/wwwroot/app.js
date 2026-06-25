@@ -4,6 +4,7 @@ const els = {
   input: document.getElementById("packageInput"),
   scan: document.getElementById("scanButton"),
   status: document.getElementById("status"),
+  intro: document.getElementById("intro"),
   results: document.getElementById("results"),
   overall: document.getElementById("overall"),
   graph: document.getElementById("graph"),
@@ -57,11 +58,14 @@ connection.start().catch((err) => console.error("SignalR connect failed", err));
 
 els.scan.addEventListener("click", startScan);
 els.input.addEventListener("keydown", (e) => { if (e.key === "Enter") startScan(); });
+document.querySelectorAll(".example").forEach((b) =>
+  b.addEventListener("click", () => { els.input.value = b.dataset.package; startScan(); }));
 
 async function startScan() {
   const pkg = els.input.value.trim();
   if (!pkg) return;
   els.scan.disabled = true;
+  els.intro.classList.add("hidden");
   els.results.classList.add("hidden");
   setStatus("Queued", "submitting…");
 
@@ -88,6 +92,7 @@ function setStatus(state, detail, failed) {
 
 async function loadResults(pkg) {
   currentPackage = pkg;
+  els.intro.classList.add("hidden");
   setStatus("Completed", "rendering report…");
 
   const [graph, risk, upgrade] = await Promise.all([

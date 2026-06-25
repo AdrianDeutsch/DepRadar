@@ -4,6 +4,7 @@
 | --------------- | -------------------------------------------------------------------- |
 | `banner.svg`    | Repository header banner.                                            |
 | `demo.gif`      | Dashboard tour: landing → healthy graph → a risky package flagged.   |
+| `landing.png`   | The landing view (intro + clickable example packages).              |
 | `dashboard.png` | A healthy 24-package transitive graph + sortable risk ranking.       |
 | `risk.png`      | A deprecated/archived package flagged across categories + upgrade advice. |
 | `graph.png`     | A larger (28-package) dependency graph.                              |
