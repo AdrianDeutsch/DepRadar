@@ -71,6 +71,31 @@ button.ghost { background: transparent; color: var(--teal); border: 1px solid #2
 }
 .status .pill.failed { background: #3a1717; color: var(--critical); }
 
+.projectbar { margin-top: 12px; }
+#projectToggle { padding: 4px 0; border: none; background: transparent; color: var(--muted); font-size: 13px; }
+#projectToggle:hover { color: var(--teal); }
+#projectPanel { margin-top: 10px; }
+#projectInput {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  padding: 12px;
+  resize: vertical;
+}
+.projectactions { margin-top: 10px; }
+.projectresults { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+.projectresults .chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 11px; border-radius: 10px; font-size: 13px;
+  background: var(--panel); border: 1px solid var(--border); color: var(--text); text-decoration: none;
+}
+.projectresults .chip .state { font-size: 11px; color: var(--muted); }
+.projectresults a.chip:hover { border-color: var(--teal); }
+
 .results { margin-top: 24px; }
 .hidden { display: none; }
 

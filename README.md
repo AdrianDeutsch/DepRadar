@@ -52,6 +52,8 @@ has: **"Is this upgrade worth it — and how risky is it?"**
 - 🕸️ **Transitive graph** — direct *and* transitive dependencies with resolved versions.
 - 🧮 **Health scoring** — an explainable score per package and per project.
 - 🤖 **LLM upgrade advisor** — RAG over changelogs + risk data, plus a graph chatbot.
+- 📦 **Whole-project scan** — paste a `.csproj` or `packages.lock.json` to scan every
+  direct dependency at once (the "scan your own solution" use case).
 - ⚡ **Live updates** — SignalR streams scan progress in real time.
 
 > **All six slices are shipped.** An async, durable scan resolves a package's **full
@@ -173,11 +175,15 @@ curl "http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/upgrade?fro
 
 # Audit-ready Markdown report
 curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/report
+
+# Scan a whole project — queues a scan per direct dependency
+curl -X POST http://localhost:<api-port>/api/projects/scan \
+  -H "Content-Type: text/plain" --data-binary @MyApp.csproj
 ```
 
-The **dashboard** is served at the API root (`/`): enter a package, watch the scan
-progress live over SignalR, then explore the graph, the sortable risk ranking and the
-upgrade advice — and download the report.
+The **dashboard** is served at the API root (`/`): enter a package (or paste a whole
+`.csproj`), watch the scan progress live over SignalR, then explore the graph, the
+sortable risk ranking and the upgrade advice — and download the report.
 
 The interactive API reference is at `/scalar/v1`.
 

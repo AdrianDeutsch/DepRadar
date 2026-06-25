@@ -19,6 +19,17 @@
       <div id="status" class="status"></div>
     </section>
 
+    <section class="projectbar">
+      <button id="projectToggle" class="ghost">▾ or scan a whole project (.csproj / packages.lock.json)</button>
+      <div id="projectPanel" class="hidden">
+        <textarea id="projectInput" rows="6" placeholder="Paste your .csproj or packages.lock.json here…" spellcheck="false"></textarea>
+        <div class="projectactions">
+          <button id="projectScanButton">Scan project</button>
+        </div>
+        <div id="projectResults" class="projectresults"></div>
+      </div>
+    </section>
+
     <section id="results" class="results hidden">
       <div class="grid">
         <div class="panel">

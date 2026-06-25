@@ -67,6 +67,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapPackageEndpoints();
 app.MapScanEndpoints();
+app.MapProjectEndpoints();
 app.MapHub<ScanHub>("/hubs/scan");
 
 await app.RunAsync();

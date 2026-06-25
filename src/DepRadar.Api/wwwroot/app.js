@@ -11,6 +11,11 @@ const els = {
   drill: document.getElementById("drill"),
   upgrade: document.getElementById("upgrade"),
   report: document.getElementById("reportButton"),
+  projectToggle: document.getElementById("projectToggle"),
+  projectPanel: document.getElementById("projectPanel"),
+  projectInput: document.getElementById("projectInput"),
+  projectScan: document.getElementById("projectScanButton"),
+  projectResults: document.getElementById("projectResults"),
 };
 
 const LEVEL_COLOR = {
@@ -21,6 +26,8 @@ let currentPackage = null;
 let riskRows = [];
 let sortKey = "score";
 let sortAsc = true;
+let activeSingleScanId = null;
+const projectScans = new Map(); // scanId -> { packageId, chip }
 
 // ---- SignalR live progress -------------------------------------------------
 
@@ -30,6 +37,12 @@ const connection = new signalR.HubConnectionBuilder()
   .build();
 
 connection.on("ScanUpdated", (scan) => {
+  if (projectScans.has(scan.id)) {
+    updateProjectChip(scan);
+    return;
+  }
+  if (scan.id !== activeSingleScanId) return;
+
   setStatus(scan.status, `${scan.packagesDiscovered} pkgs · ${scan.edgesWritten} edges`);
   if (scan.status === "Completed") {
     loadResults(scan.rootPackageId);
@@ -56,6 +69,7 @@ async function startScan() {
     const res = await fetch(`/api/packages/${encodeURIComponent(pkg)}/scan`, { method: "POST" });
     if (!res.ok) throw new Error(`scan request failed (${res.status})`);
     const scan = await res.json();
+    activeSingleScanId = scan.id;
     await connection.invoke("Subscribe", scan.id);
     setStatus(scan.status, "waiting for the worker…");
   } catch (err) {
@@ -193,6 +207,64 @@ els.report.addEventListener("click", async () => {
   a.click();
   URL.revokeObjectURL(url);
 });
+
+// ---- Project scan (.csproj / packages.lock.json) ---------------------------
+
+els.projectToggle.addEventListener("click", () => els.projectPanel.classList.toggle("hidden"));
+els.projectScan.addEventListener("click", submitProject);
+
+async function submitProject() {
+  const content = els.projectInput.value.trim();
+  if (!content) return;
+  els.projectScan.disabled = true;
+  els.projectResults.innerHTML = "<span class='state'>parsing…</span>";
+
+  try {
+    const res = await fetch("/api/projects/scan", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: content,
+    });
+    if (!res.ok) throw new Error(`project scan failed (${res.status})`);
+
+    const dto = await res.json();
+    els.projectResults.innerHTML = "";
+    projectScans.clear();
+    for (const pkg of dto.packages) {
+      const chip = addProjectChip(pkg.packageId);
+      projectScans.set(pkg.scanId, { packageId: pkg.packageId, chip });
+      await connection.invoke("Subscribe", pkg.scanId);
+    }
+  } catch (err) {
+    els.projectResults.innerHTML = `<span class="state" style="color:#f87171">${escapeHtml(err.message)}</span>`;
+  } finally {
+    els.projectScan.disabled = false;
+  }
+}
+
+function addProjectChip(packageId) {
+  const chip = document.createElement("span");
+  chip.className = "chip";
+  chip.innerHTML = `${escapeHtml(packageId)} <span class="state">Queued</span>`;
+  els.projectResults.appendChild(chip);
+  return chip;
+}
+
+function updateProjectChip(scan) {
+  const entry = projectScans.get(scan.id);
+  if (!entry) return;
+
+  if (scan.status === "Completed") {
+    const link = document.createElement("a");
+    link.className = "chip";
+    link.href = `/?package=${encodeURIComponent(entry.packageId)}`;
+    link.innerHTML = `${escapeHtml(entry.packageId)} <span class="state" style="color:#34d399">✓ view report</span>`;
+    entry.chip.replaceWith(link);
+    entry.chip = link;
+  } else {
+    entry.chip.querySelector(".state").textContent = scan.status;
+  }
+}
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (c) =>
