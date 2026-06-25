@@ -1,14 +1,12 @@
 # Visual assets
 
-Placeholder SVGs keep the README layout intact until the real captures exist. They
-are referenced from the root `README.md` and replaced as the slices land.
+| Asset           | What it shows                                                        |
+| --------------- | -------------------------------------------------------------------- |
+| `banner.svg`    | Repository header banner.                                            |
+| `demo.gif`      | Dashboard tour: landing → healthy graph → a risky package flagged.   |
+| `dashboard.png` | A healthy 24-package transitive graph + sortable risk ranking.       |
+| `risk.png`      | A deprecated/archived package flagged across categories + upgrade advice. |
+| `graph.png`     | A larger (28-package) dependency graph.                              |
 
-| Placeholder (now)            | Real asset (planned)      | Slice |
-| ---------------------------- | ------------------------- | ----- |
-| `banner.svg`                 | — (kept)                  | 1     |
-| `demo-placeholder.svg`       | `demo.gif`                | 5     |
-| `dashboard-placeholder.svg`  | `dashboard.png`           | 5     |
-| `graph-placeholder.svg`      | `graph.png`               | 5     |
-
-When recording the real assets, drop them in this folder under the planned name and
-update the references in the root `README.md`.
+These were captured live from the running dashboard. To re-capture, run the app and
+screenshot the deep-link `http://localhost:<port>/?package=<id>` after scanning a package.

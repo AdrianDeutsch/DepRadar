@@ -20,18 +20,19 @@
 ## Demo
 
 <p align="center">
-  <img src="docs/assets/demo-placeholder.svg" alt="Live scan demo" width="100%" />
+  <img src="docs/assets/demo.gif" alt="DepRadar dashboard demo" width="100%" />
 </p>
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/assets/dashboard-placeholder.svg" alt="Risk dashboard" /></td>
-    <td width="50%"><img src="docs/assets/graph-placeholder.svg" alt="Dependency graph" /></td>
+    <td width="50%"><img src="docs/assets/dashboard.png" alt="Risk dashboard with dependency graph" /></td>
+    <td width="50%"><img src="docs/assets/risk.png" alt="Risk findings and upgrade advice for a risky package" /></td>
   </tr>
 </table>
 
-> The visuals above are placeholders. The **dashboard is live** — run the app and open
-> the API root to capture the real GIF/screenshots (see [`docs/assets`](docs/assets/README.md)).
+> Captured live: a healthy 24-package graph (left) and a deprecated, archived package
+> that DepRadar flags across security, license and maintenance, with an upgrade verdict
+> (right). The dashboard deep-links to any scanned package via `/?package=<id>`.
 
 ## Problem & solution
 

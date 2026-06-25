@@ -198,3 +198,17 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
+
+// Deep link: /?package=Some.Package loads a previously scanned package's report
+// directly (shareable link) and opens its worst finding.
+(function deepLink() {
+  const pkg = new URLSearchParams(location.search).get("package");
+  if (!pkg) return;
+  els.input.value = pkg;
+  setStatus("Completed", "loading stored report…");
+  loadResults(pkg).then(() => {
+    if (riskRows.length) {
+      showDrill(riskRows.reduce((worst, p) => (p.score <= worst.score ? p : worst)));
+    }
+  });
+})();
