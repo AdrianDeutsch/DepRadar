@@ -69,6 +69,7 @@ public sealed class RagTests(PostgresFixture fixture) : IClassFixture<PostgresFi
         services.AddInfrastructure();
         services.AddScoped<IDependencyGraphResolver, StubGraphResolver>();
         services.AddScoped<IVulnerabilitySource, StubVulnerabilitySource>();
+        services.AddScoped<IRepositoryHealthEnricher, StubRepositoryHealthEnricher>();
 
         return services.BuildServiceProvider();
     }

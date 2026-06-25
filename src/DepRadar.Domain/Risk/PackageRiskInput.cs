@@ -13,6 +13,8 @@ namespace DepRadar.Domain.Risk;
 /// <param name="ResolvedLicense">The license of the assessed version, if known.</param>
 /// <param name="LatestLicense">The license of the latest available version, if known.</param>
 /// <param name="IsDeprecated">Whether the assessed version is deprecated.</param>
+/// <param name="IsArchived">Whether the source repository is archived.</param>
+/// <param name="IsRepositoryStale">Whether the source repository has had no recent commits.</param>
 /// <param name="Vulnerabilities">Known advisories for the assessed version.</param>
 public sealed record PackageRiskInput(
     PackageId Package,
@@ -20,4 +22,6 @@ public sealed record PackageRiskInput(
     SpdxLicense? ResolvedLicense,
     SpdxLicense? LatestLicense,
     bool IsDeprecated,
+    bool IsArchived,
+    bool IsRepositoryStale,
     IReadOnlyList<PackageVulnerability> Vulnerabilities);

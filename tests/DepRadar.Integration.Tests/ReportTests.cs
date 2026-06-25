@@ -58,6 +58,7 @@ public sealed class ReportTests(PostgresFixture fixture) : IClassFixture<Postgre
         services.AddInfrastructure();
         services.AddScoped<IDependencyGraphResolver, StubGraphResolver>();
         services.AddScoped<IVulnerabilitySource, StubVulnerabilitySource>();
+        services.AddScoped<IRepositoryHealthEnricher, StubRepositoryHealthEnricher>();
 
         return services.BuildServiceProvider();
     }

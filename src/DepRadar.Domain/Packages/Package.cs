@@ -48,6 +48,12 @@ public sealed class Package : IAggregateRoot
     /// <summary>The latest stable version observed for the package.</summary>
     public SemVer? LatestStableVersion { get; private set; }
 
+    /// <summary>Whether the source repository is archived (read-only / unmaintained).</summary>
+    public bool IsArchived { get; private set; }
+
+    /// <summary>When the source repository was last pushed to, if known.</summary>
+    public DateTimeOffset? LastCommitAt { get; private set; }
+
     /// <summary>When the package was first ingested.</summary>
     public DateTimeOffset FirstSeenAt { get; private set; }
 
@@ -77,6 +83,15 @@ public sealed class Package : IAggregateRoot
         License = license;
         IsDeprecated = isDeprecated;
         LatestStableVersion = latestStableVersion;
+        LastRefreshedAt = timestamp;
+    }
+
+    /// <summary>Records source-repository health (archived flag, last push) for maintenance scoring.</summary>
+    public void RecordRepositoryHealth(Uri? sourceRepositoryUrl, bool isArchived, DateTimeOffset? lastCommitAt, DateTimeOffset timestamp)
+    {
+        SourceRepositoryUrl = sourceRepositoryUrl ?? SourceRepositoryUrl;
+        IsArchived = isArchived;
+        LastCommitAt = lastCommitAt;
         LastRefreshedAt = timestamp;
     }
 }

@@ -22,6 +22,7 @@ public sealed class RunScanHandler(
     IVulnerabilitySource vulnerabilitySource,
     IRiskRepository riskRepository,
     IChangelogIndexer changelogIndexer,
+    IRepositoryHealthEnricher repositoryHealthEnricher,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
     ILogger<RunScanHandler> logger)
@@ -60,6 +61,9 @@ public sealed class RunScanHandler(
                 // Build the RAG corpus from what we just learned (versions, license
                 // changes, advisories). Reads back the committed data above.
                 await changelogIndexer.IndexAsync(scan.RootPackageId, cancellationToken);
+
+                // Best-effort: enrich the root's maintenance signals from its repo.
+                await repositoryHealthEnricher.EnrichAsync(scan.RootPackageId, cancellationToken);
 
                 scan.Complete(graph.Nodes.Count, graph.Edges.Count, timeProvider.GetUtcNow());
                 DepRadarTelemetry.ScansCompleted.Add(1);

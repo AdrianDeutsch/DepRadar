@@ -59,10 +59,28 @@ public sealed class PackageRiskScorerTests
         assessment.Score.Value.ShouldBe(50);
     }
 
+    [Fact]
+    public void Archived_repository_is_flagged_high()
+    {
+        var assessment = PackageRiskScorer.Assess(Input(license: "MIT", latest: "MIT", archived: true));
+
+        assessment.Findings.ShouldContain(f => f.Code == "ARCHIVED" && f.Level == RiskLevel.High);
+    }
+
+    [Fact]
+    public void Stale_repository_is_flagged_medium()
+    {
+        var assessment = PackageRiskScorer.Assess(Input(license: "MIT", latest: "MIT", stale: true));
+
+        assessment.Findings.ShouldContain(f => f.Code == "STALE" && f.Level == RiskLevel.Medium);
+    }
+
     private static PackageRiskInput Input(
         string license,
         string latest,
         bool deprecated = false,
+        bool archived = false,
+        bool stale = false,
         IReadOnlyList<PackageVulnerability>? vulnerabilities = null) =>
         new(
             Package,
@@ -70,5 +88,7 @@ public sealed class PackageRiskScorerTests
             SpdxLicense.Create(license),
             SpdxLicense.Create(latest),
             deprecated,
+            archived,
+            stale,
             vulnerabilities ?? []);
 }

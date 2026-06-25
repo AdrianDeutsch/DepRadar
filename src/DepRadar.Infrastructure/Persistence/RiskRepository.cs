@@ -10,8 +10,11 @@ namespace DepRadar.Infrastructure.Persistence;
 /// EF Core implementation of <see cref="IRiskRepository"/>. Stores advisories
 /// idempotently and assembles scoring inputs with batched reads.
 /// </summary>
-internal sealed class RiskRepository(DepRadarDbContext dbContext) : IRiskRepository
+internal sealed class RiskRepository(DepRadarDbContext dbContext, TimeProvider timeProvider) : IRiskRepository
 {
+    // A repository with no commits for this long is treated as stale/abandoned.
+    private static readonly TimeSpan StaleThreshold = TimeSpan.FromDays(548); // ~18 months
+
     /// <inheritdoc />
     public async Task UpsertVulnerabilitiesAsync(IReadOnlyCollection<PackageVulnerability> vulnerabilities, CancellationToken cancellationToken)
     {
@@ -90,9 +93,14 @@ internal sealed class RiskRepository(DepRadarDbContext dbContext) : IRiskReposit
                 packageVersion.License,
                 packageEntity?.License,
                 packageVersion.IsDeprecated,
+                packageEntity?.IsArchived ?? false,
+                IsStale(packageEntity?.LastCommitAt),
                 advisories));
         }
 
         return inputs;
     }
+
+    private bool IsStale(DateTimeOffset? lastCommitAt) =>
+        lastCommitAt is { } last && last < timeProvider.GetUtcNow() - StaleThreshold;
 }

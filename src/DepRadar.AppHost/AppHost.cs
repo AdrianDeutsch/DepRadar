@@ -11,12 +11,20 @@ var postgres = builder.AddPostgres("postgres")
 
 var depRadarDb = postgres.AddDatabase("depradardb");
 
+// Redis as the shared L2 for HybridCache, so the API and Worker share cached
+// external responses across processes.
+var cache = builder.AddRedis("cache");
+
 builder.AddProject<Projects.DepRadar_Api>("api")
     .WithReference(depRadarDb)
-    .WaitFor(depRadarDb);
+    .WithReference(cache)
+    .WaitFor(depRadarDb)
+    .WaitFor(cache);
 
 builder.AddProject<Projects.DepRadar_Worker>("worker")
     .WithReference(depRadarDb)
-    .WaitFor(depRadarDb);
+    .WithReference(cache)
+    .WaitFor(depRadarDb)
+    .WaitFor(cache);
 
 builder.Build().Run();

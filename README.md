@@ -196,8 +196,9 @@ The interactive API reference is at `/scalar/v1`.
 4. Packages, versions and **dependency edges are upserted idempotently** — re-running
    a scan never duplicates rows.
 5. During the scan each node is also scored: **OSV.dev** is queried for advisories,
-   while license + deprecation come from the NuGet catalog already fetched. A pure
-   `PackageRiskScorer` turns these signals into explainable findings (security,
+   license + deprecation come from the NuGet catalog already fetched, and the root's
+   **source-repository health** (archived / last commit) is read from **GitHub**. A
+   pure `PackageRiskScorer` turns these signals into explainable findings (security,
    license, license-shift, maintenance) and an additive health score.
 6. `GET /api/packages/{id}/graph` returns the transitive closure (recursive CTE);
    `GET /api/packages/{id}/risk` and `…/graph/risk` return the scored report.
@@ -241,9 +242,10 @@ Central Package Management, and a GitHub Actions [CI pipeline](.github/workflows
 running build, format check and all tests.
 
 Production hardening ([ADR 0008]): `Microsoft.Extensions.Http.Resilience` on every
-external call, `HybridCache` to keep re-scans off the API quota, **EF Core migrations**
-(validated against pgvector on every test run), a **stale-scan reaper**, custom
-**OpenTelemetry** spans/metrics via Aspire, and a database health check.
+external call, **HybridCache** (in-memory L1 + **Redis** L2 via Aspire) to keep
+re-scans off the API quota, **EF Core migrations** (validated against pgvector on every
+test run), a **stale-scan reaper**, custom **OpenTelemetry** spans/metrics via Aspire,
+and a database health check.
 
 ```bash
 dotnet test           # unit + architecture + integration (needs Docker)

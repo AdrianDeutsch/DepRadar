@@ -33,5 +33,14 @@ health check) plus custom observability.
 - Re-scans are fast and quota-friendly; the schema is versioned and migration-validated.
 - Lost/abandoned scans self-heal.
 - Generated migration code is exempted from the analyzer bar via `.editorconfig`.
-- Remaining nice-to-haves (Redis L2 cache, GitHub repo-health signal, a recorded demo
-  GIF) are noted but out of scope; the dashboard is live and ready to capture.
+
+## Follow-ups since shipped
+
+- **Redis L2 cache**: HybridCache now uses a Redis `IDistributedCache` (wired by Aspire)
+  as a shared L2, so the API and Worker share cached responses across processes; absent
+  Redis it falls back to L1.
+- **GitHub repo-health**: a best-effort enricher resolves a package's source repo (via
+  deps.dev) and reads `archived` / `pushed_at` from the GitHub API (token-optional,
+  cached), feeding `ARCHIVED` (high) and `STALE` (medium) maintenance findings. Adding
+  the two columns required a second migration (`AddRepositoryHealth`) — exactly the kind
+  of schema change `Migrate()` catches that `EnsureCreated` would silently mask.

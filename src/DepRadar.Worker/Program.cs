@@ -8,13 +8,20 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.AddServiceDefaults();
 builder.Services.AddDepRadarDbContext(builder.Configuration.GetConnectionString("depradardb"));
 
+// Redis L2 for HybridCache when orchestrated by Aspire; absent it falls back to L1.
+if (!string.IsNullOrEmpty(builder.Configuration.GetConnectionString("cache")))
+{
+    builder.AddRedisDistributedCache("cache");
+}
+
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(
     builder.Configuration["DepsDev:BaseUrl"],
     builder.Configuration["NuGet:BaseUrl"],
     builder.Configuration["Osv:BaseUrl"],
     builder.Configuration["Anthropic:ApiKey"],
-    builder.Configuration["Anthropic:Model"]);
+    builder.Configuration["Anthropic:Model"],
+    builder.Configuration["GitHub:Token"]);
 
 // Ingestion pipeline: one shared queue, a DB poller (producer) and a consumer.
 builder.Services.AddSingleton<ScanDispatchQueue>();

@@ -93,6 +93,7 @@ public sealed class ScanGraphTests(PostgresFixture fixture) : IClassFixture<Post
         // Deterministic graph + advisories instead of the real NuGet/OSV clients.
         services.AddScoped<IDependencyGraphResolver, StubGraphResolver>();
         services.AddScoped<IVulnerabilitySource, StubVulnerabilitySource>();
+        services.AddScoped<IRepositoryHealthEnricher, StubRepositoryHealthEnricher>();
 
         return services.BuildServiceProvider();
     }

@@ -71,6 +71,7 @@ public sealed class RiskTests(PostgresFixture fixture) : IClassFixture<PostgresF
         services.AddInfrastructure();
         services.AddScoped<IDependencyGraphResolver, StubGraphResolver>();
         services.AddScoped<IVulnerabilitySource, StubVulnerabilitySource>();
+        services.AddScoped<IRepositoryHealthEnricher, StubRepositoryHealthEnricher>();
 
         return services.BuildServiceProvider();
     }

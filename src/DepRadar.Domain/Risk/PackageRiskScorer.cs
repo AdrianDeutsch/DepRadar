@@ -17,7 +17,7 @@ public static class PackageRiskScorer
         AddSecurityFindings(findings, input);
         AddLicenseFindings(findings, input.ResolvedLicense);
         AddLicenseShiftFinding(findings, input.ResolvedLicense, input.LatestLicense);
-        AddMaintenanceFindings(findings, input.IsDeprecated);
+        AddMaintenanceFindings(findings, input);
 
         return new RiskAssessment(HealthScore.FromFindings(findings), findings);
     }
@@ -84,11 +84,20 @@ public static class PackageRiskScorer
             $"License changed from {from} to {to} in newer versions{note}."));
     }
 
-    private static void AddMaintenanceFindings(List<RiskFinding> findings, bool isDeprecated)
+    private static void AddMaintenanceFindings(List<RiskFinding> findings, PackageRiskInput input)
     {
-        if (isDeprecated)
+        if (input.IsDeprecated)
         {
             findings.Add(new RiskFinding(RiskCategory.Maintenance, RiskLevel.High, "DEPRECATED", "The package version is deprecated on NuGet."));
+        }
+
+        if (input.IsArchived)
+        {
+            findings.Add(new RiskFinding(RiskCategory.Maintenance, RiskLevel.High, "ARCHIVED", "The source repository is archived (no longer maintained)."));
+        }
+        else if (input.IsRepositoryStale)
+        {
+            findings.Add(new RiskFinding(RiskCategory.Maintenance, RiskLevel.Medium, "STALE", "No recent commits to the source repository."));
         }
     }
 }

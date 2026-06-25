@@ -2,6 +2,7 @@ using System.Net;
 using DepRadar.Application.Abstractions;
 using DepRadar.Infrastructure.Ai;
 using DepRadar.Infrastructure.External.DepsDev;
+using DepRadar.Infrastructure.External.GitHub;
 using DepRadar.Infrastructure.External.NuGet;
 using DepRadar.Infrastructure.External.Osv;
 using DepRadar.Infrastructure.Persistence;
@@ -35,13 +36,15 @@ public static class DependencyInjection
     /// <param name="osvBaseUrl">Base URL of the OSV.dev API (overridable for tests).</param>
     /// <param name="anthropicApiKey">Anthropic API key; when set, the live Claude advisor is used.</param>
     /// <param name="anthropicModel">Anthropic model id (defaults to a current Claude model).</param>
+    /// <param name="gitHubToken">GitHub token (optional) to raise the repo-health API rate limit.</param>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         string? depsDevBaseUrl = null,
         string? nuGetBaseUrl = null,
         string? osvBaseUrl = null,
         string? anthropicApiKey = null,
-        string? anthropicModel = null)
+        string? anthropicModel = null,
+        string? gitHubToken = null)
     {
         // Caches external API responses (NuGet/OSV/deps.dev) so repeated scans don't
         // burn quota; an idempotent re-scan hits the cache, not the network.
@@ -53,6 +56,7 @@ public static class DependencyInjection
         services.AddScoped<IRiskRepository, RiskRepository>();
         services.AddScoped<IChangelogRepository, ChangelogRepository>();
         services.AddScoped<IChangelogIndexer, ChangelogIndexer>();
+        services.AddScoped<IRepositoryHealthEnricher, RepositoryHealthEnricher>();
         services.AddScoped<IDependencyGraphResolver, DependencyGraphResolver>();
         services.AddSingleton<IEmbeddingGenerator, HashingEmbeddingGenerator>();
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<DepRadarDbContext>());
@@ -81,6 +85,19 @@ public static class DependencyInjection
             {
                 client.BaseAddress = new Uri(osvBaseUrl ?? DefaultOsvBaseUrl);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            })
+            .AddStandardResilienceHandler();
+
+        services.AddHttpClient<IRepositoryHealthSource, GitHubRepositoryHealthSource>(client =>
+            {
+                client.BaseAddress = new Uri("https://api.github.com/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+                client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+                client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
+                if (!string.IsNullOrWhiteSpace(gitHubToken))
+                {
+                    client.DefaultRequestHeaders.Authorization = new("Bearer", gitHubToken);
+                }
             })
             .AddStandardResilienceHandler();
 
