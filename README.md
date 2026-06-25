@@ -224,6 +224,24 @@ depradar diff Newtonsoft.Json 12.0.3 13.0.3
 
 Exit codes: `0` policy passed · `1` policy violated · `2` usage error.
 
+### GitHub Action — gate dependencies in CI
+
+The CLI ships as a composite [GitHub Action](action.yml). DepRadar **dogfoods it** —
+[`dependency-health`](.github/workflows/depradar.yml) gates DepRadar's own dependencies
+on every push and uploads a CycloneDX SBOM artifact. In another repository:
+
+```yaml
+- uses: AdrianDeutsch/DepRadar@v1
+  with:
+    target: src/MyApp/MyApp.csproj   # a package id, .csproj, or packages.lock.json
+    fail-on: high                    # none | low | medium | high | critical
+    no-deprecated: true
+    forbid: copyleft                 # comma-separated license categories
+    sbom: sbom.json                  # optional CycloneDX export
+```
+
+The step fails the workflow on a policy violation — a real, shift-left dependency gate.
+
 The **dashboard** is served at the API root (`/`): enter a package (or paste a whole
 `.csproj`), watch the scan progress live over SignalR, then explore the graph, the
 sortable risk ranking and the upgrade advice — and download the report.

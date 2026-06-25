@@ -1,0 +1,78 @@
+name: 'DepRadar dependency-health gate'
+description: 'Scan a NuGet package or project for security, license and maintenance risk, and fail the build on policy violations.'
+author: 'Adrian Deutsch'
+
+branding:
+  icon: 'shield'
+  color: 'green'
+
+inputs:
+  target:
+    description: 'A NuGet package id, a .csproj, or a packages.lock.json path to scan.'
+    required: true
+  fail-on:
+    description: 'Fail when any package is at or above this level: none, low, medium, high, critical.'
+    required: false
+    default: 'high'
+  no-deprecated:
+    description: 'Fail the build if any package is deprecated.'
+    required: false
+    default: 'false'
+  forbid:
+    description: 'Comma-separated license categories to forbid: permissive, weakcopyleft, copyleft, unknown.'
+    required: false
+    default: ''
+  sbom:
+    description: 'Optional path to also write a CycloneDX SBOM.'
+    required: false
+    default: ''
+  dotnet-version:
+    description: 'The .NET SDK version used to install and run the tool.'
+    required: false
+    default: '10.0.x'
+  tool-version:
+    description: 'The DepRadar.Tool version to install.'
+    required: false
+    default: '0.1.0'
+  tool-source:
+    description: 'Extra NuGet source for the tool (e.g. a locally-packed nupkg directory). Defaults to NuGet.org.'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
+    - name: Run DepRadar
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+
+        install_args=(tool install --global DepRadar.Tool --version "${{ inputs.tool-version }}")
+        if [ -n "${{ inputs.tool-source }}" ]; then
+          install_args+=(--add-source "${{ inputs.tool-source }}")
+        fi
+        dotnet "${install_args[@]}"
+        export PATH="$PATH:$HOME/.dotnet/tools"
+
+        scan_args=(scan "${{ inputs.target }}" --fail-on "${{ inputs.fail-on }}")
+        if [ "${{ inputs.no-deprecated }}" = "true" ]; then
+          scan_args+=(--no-deprecated)
+        fi
+        if [ -n "${{ inputs.forbid }}" ]; then
+          IFS=',' read -ra categories <<< "${{ inputs.forbid }}"
+          for category in "${categories[@]}"; do
+            scan_args+=(--forbid "$(echo "$category" | tr -d ' ')")
+          done
+        fi
+        if [ -n "${{ inputs.sbom }}" ]; then
+          scan_args+=(--sbom "${{ inputs.sbom }}")
+        fi
+
+        depradar "${scan_args[@]}"

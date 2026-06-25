@@ -1,0 +1,40 @@
+name: dependency-health
+
+# Dogfooding: DepRadar gates its own dependencies on every push, using the composite
+# action that wraps the depradar CLI. The tool is packed from source and installed
+# from the local nupkg, so this proves the action end-to-end without a published feed.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Pack the depradar tool
+        run: dotnet pack src/DepRadar.Cli/DepRadar.Cli.csproj -c Release -o ./artifacts/nupkg
+
+      - name: Gate dependencies with DepRadar
+        uses: ./
+        with:
+          target: src/DepRadar.Api/DepRadar.Api.csproj
+          fail-on: critical
+          sbom: depradar-sbom.json
+          tool-source: ./artifacts/nupkg
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: cyclonedx-sbom
+          path: depradar-sbom.json
