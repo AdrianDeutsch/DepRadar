@@ -19,4 +19,10 @@ public interface IScanRepository
 
     /// <summary>Returns currently active scans (Queued or Running) for live progress.</summary>
     Task<IReadOnlyList<Scan>> GetActiveAsync(int max, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns tracked scans stuck in <c>Running</c> since before <paramref name="startedBefore"/>
+    /// (abandoned by a crashed worker), so they can be requeued.
+    /// </summary>
+    Task<IReadOnlyList<Scan>> GetStaleRunningAsync(DateTimeOffset startedBefore, int max, CancellationToken cancellationToken);
 }

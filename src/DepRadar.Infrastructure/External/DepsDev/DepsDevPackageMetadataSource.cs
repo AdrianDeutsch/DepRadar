@@ -1,8 +1,7 @@
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
 using DepRadar.Application.Abstractions;
 using DepRadar.Domain.ValueObjects;
+using DepRadar.Infrastructure.Caching;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 
 namespace DepRadar.Infrastructure.External.DepsDev;
@@ -20,11 +19,10 @@ namespace DepRadar.Infrastructure.External.DepsDev;
 /// </remarks>
 internal sealed class DepsDevPackageMetadataSource(
     HttpClient httpClient,
+    HybridCache cache,
     ILogger<DepsDevPackageMetadataSource> logger)
     : IPackageMetadataSource
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     /// <inheritdoc />
     public async Task<PackageMetadata?> GetAsync(PackageId id, CancellationToken cancellationToken)
     {
@@ -74,17 +72,8 @@ internal sealed class DepsDevPackageMetadataSource(
             $"v3/systems/nuget/packages/{name}/versions/{Uri.EscapeDataString(version)}",
             cancellationToken);
 
-    private async Task<T?> GetJsonAsync<T>(string relativeUrl, CancellationToken cancellationToken)
-    {
-        using var response = await httpClient.GetAsync(relativeUrl, cancellationToken);
-        if (response.StatusCode == HttpStatusCode.NotFound)
-        {
-            return default;
-        }
-
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken);
-    }
+    private Task<T?> GetJsonAsync<T>(string relativeUrl, CancellationToken cancellationToken) =>
+        HttpJsonCache.GetAsync<T>(cache, httpClient, $"depsdev:{relativeUrl}", relativeUrl, cancellationToken);
 
     /// <summary>Returns the highest stable version string, or <see langword="null"/> if none parse/are stable.</summary>
     private static string? ComputeLatestStableVersion(IEnumerable<PackageVersionMetadata> versions)

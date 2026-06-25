@@ -53,12 +53,13 @@ has: **"Is this upgrade worth it — and how risky is it?"**
 - 🤖 **LLM upgrade advisor** — RAG over changelogs + risk data, plus a graph chatbot.
 - ⚡ **Live updates** — SignalR streams scan progress in real time.
 
-> Slices 1–5 are shipped: an async, durable scan resolves a package's **full
+> **All six slices are shipped.** An async, durable scan resolves a package's **full
 > transitive graph** from NuGet, scores every node for **security (OSV), license,
 > license-shift and maintenance** risk, an **LLM-ready upgrade advisor** answers "is
-> this upgrade worth it?" with **RAG over pgvector** + prompt-injection defense, and a
-> **live dashboard** (SignalR) plus a **Markdown audit report** present it. The
-> remaining items are hardening; see the [roadmap](#roadmap).
+> this upgrade worth it?" with **RAG over pgvector** + prompt-injection defense, a
+> **live dashboard** (SignalR) plus a **Markdown audit report** present it, and the
+> whole thing is hardened with caching, EF migrations, a stale-scan reaper and
+> OpenTelemetry. See the [roadmap](#roadmap).
 
 ## Architecture
 
@@ -239,6 +240,11 @@ Quality gates: nullable reference types, `TreatWarningsAsErrors`,
 Central Package Management, and a GitHub Actions [CI pipeline](.github/workflows/ci.yml)
 running build, format check and all tests.
 
+Production hardening ([ADR 0008]): `Microsoft.Extensions.Http.Resilience` on every
+external call, `HybridCache` to keep re-scans off the API quota, **EF Core migrations**
+(validated against pgvector on every test run), a **stale-scan reaper**, custom
+**OpenTelemetry** spans/metrics via Aspire, and a database health check.
+
 ```bash
 dotnet test           # unit + architecture + integration (needs Docker)
 ```
@@ -258,7 +264,8 @@ dotnet test           # unit + architecture + integration (needs Docker)
       `ILanguageModel` seam (Claude behind a key), and prompt-injection defense.
 - [x] **Slice 5 — Presentation:** static dashboard (graph + sortable risk ranking),
       **SignalR** live scan progress, and a Markdown audit report export.
-- [ ] **Slice 6 — Hardening & presentation:** observability, caching, CI/CD, real demo assets.
+- [x] **Slice 6 — Hardening:** HybridCache for external responses, EF Core migrations
+      (incl. pgvector), a stale-scan reaper, custom OpenTelemetry, and a DB health check.
 
 ## License & credits
 
@@ -270,3 +277,5 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [SPDX License List](https://spdx.org/licenses/).
 
 [ADR 0002]: docs/adr/0002-handrolled-mediator.md
+[ADR 0006]: docs/adr/0006-llm-rag-and-injection-defense.md
+[ADR 0008]: docs/adr/0008-production-hardening.md

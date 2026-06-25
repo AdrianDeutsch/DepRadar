@@ -1,9 +1,8 @@
 using System.Globalization;
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using DepRadar.Domain.ValueObjects;
+using DepRadar.Infrastructure.Caching;
+using Microsoft.Extensions.Caching.Hybrid;
 using NuGet.Versioning;
 
 namespace DepRadar.Infrastructure.External.NuGet;
@@ -12,11 +11,10 @@ namespace DepRadar.Infrastructure.External.NuGet;
 /// Reads package version + dependency metadata from the NuGet V3 registration API
 /// (gz-semver2). For each version it picks a single representative target-framework
 /// group so the resolved graph reflects what a modern consumer would restore.
+/// Responses are cached so re-scans don't re-hit NuGet.
 /// </summary>
-internal sealed partial class NuGetClient(HttpClient httpClient)
+internal sealed partial class NuGetClient(HttpClient httpClient, HybridCache cache)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     /// <summary>
     /// Fetches all listed versions and their declared dependencies, or
     /// <see langword="null"/> if the package is unknown to NuGet.
@@ -151,17 +149,8 @@ internal sealed partial class NuGetClient(HttpClient httpClient)
         return match.Success ? int.Parse(match.Value, CultureInfo.InvariantCulture) : 0;
     }
 
-    private async Task<T?> GetJsonAsync<T>(string url, CancellationToken cancellationToken)
-    {
-        using var response = await httpClient.GetAsync(url, cancellationToken);
-        if (response.StatusCode == HttpStatusCode.NotFound)
-        {
-            return default;
-        }
-
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken);
-    }
+    private Task<T?> GetJsonAsync<T>(string url, CancellationToken cancellationToken) =>
+        HttpJsonCache.GetAsync<T>(cache, httpClient, $"nuget:{url}", url, cancellationToken);
 
     [GeneratedRegex(@"^net\d+\.\d", RegexOptions.CultureInvariant)]
     private static partial Regex ModernNetRegex();

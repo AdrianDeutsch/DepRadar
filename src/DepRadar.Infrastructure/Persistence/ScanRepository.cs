@@ -34,4 +34,13 @@ internal sealed class ScanRepository(DepRadarDbContext dbContext) : IScanReposit
             .OrderByDescending(s => s.RequestedAt)
             .Take(max)
             .ToListAsync(cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Scan>> GetStaleRunningAsync(DateTimeOffset startedBefore, int max, CancellationToken cancellationToken) =>
+        // Tracked (no AsNoTracking) so the caller can Requeue and commit.
+        await dbContext.Scans
+            .Where(s => s.Status == ScanStatus.Running && s.StartedAt != null && s.StartedAt < startedBefore)
+            .OrderBy(s => s.StartedAt)
+            .Take(max)
+            .ToListAsync(cancellationToken);
 }

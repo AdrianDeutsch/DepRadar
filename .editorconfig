@@ -34,6 +34,12 @@ dotnet_diagnostic.CA1873.severity = none
 dotnet_diagnostic.CA1711.severity = none
 dotnet_diagnostic.CA1716.severity = none
 
+# EF Core migrations are generated — don't hold them to our analyzer/style bar.
+[**/Migrations/*.cs]
+generated_code = true
+dotnet_diagnostic.IDE0161.severity = none
+dotnet_diagnostic.CA1861.severity = none
+
 [*.{csproj,props,targets}]
 indent_size = 2
 

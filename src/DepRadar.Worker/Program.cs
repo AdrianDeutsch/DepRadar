@@ -21,5 +21,8 @@ builder.Services.AddSingleton<ScanDispatchQueue>();
 builder.Services.AddHostedService<ScanPollingService>();
 builder.Services.AddHostedService<ScanConsumerService>();
 
+// Resilience: requeue scans abandoned by a crashed worker.
+builder.Services.AddHostedService<StaleScanReaper>();
+
 var host = builder.Build();
 await host.RunAsync();

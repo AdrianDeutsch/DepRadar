@@ -10,6 +10,8 @@
     <PackageReference Include="Pgvector" />
     <PackageReference Include="Pgvector.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
     <!-- NuGet version-range resolution. Lives ONLY in Infrastructure (ADR 0003/0004);
          an architecture test forbids it leaking into Domain/Application. -->
     <PackageReference Include="NuGet.Versioning" />

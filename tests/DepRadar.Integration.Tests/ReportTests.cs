@@ -4,6 +4,7 @@ using DepRadar.Application.Messaging;
 using DepRadar.Application.Reports;
 using DepRadar.Application.Scans;
 using DepRadar.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 using Xunit;
@@ -38,7 +39,7 @@ public sealed class ReportTests(PostgresFixture fixture) : IClassFixture<Postgre
     {
         await using var scope = provider.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<DepRadar.Infrastructure.Persistence.DepRadarDbContext>();
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.MigrateAsync();
     }
 
     private static async Task<TResponse> SendAsync<TResponse>(IServiceProvider provider, IRequest<TResponse> request)

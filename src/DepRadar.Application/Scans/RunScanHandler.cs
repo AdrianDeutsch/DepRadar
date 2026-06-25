@@ -1,6 +1,7 @@
 using DepRadar.Application.Abstractions;
 using DepRadar.Application.Exceptions;
 using DepRadar.Application.Messaging;
+using DepRadar.Application.Observability;
 using DepRadar.Domain.Packages;
 using DepRadar.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -37,6 +38,9 @@ public sealed class RunScanHandler(
             return ScanDto.FromDomain(scan);
         }
 
+        using var activity = DepRadarTelemetry.ActivitySource.StartActivity("scan");
+        activity?.SetTag("depradar.package", scan.RootPackageId.Original);
+
         scan.Start(timeProvider.GetUtcNow());
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -58,6 +62,9 @@ public sealed class RunScanHandler(
                 await changelogIndexer.IndexAsync(scan.RootPackageId, cancellationToken);
 
                 scan.Complete(graph.Nodes.Count, graph.Edges.Count, timeProvider.GetUtcNow());
+                DepRadarTelemetry.ScansCompleted.Add(1);
+                DepRadarTelemetry.PackagesDiscovered.Add(graph.Nodes.Count);
+                activity?.SetTag("depradar.nodes", graph.Nodes.Count);
                 logger.LogInformation(
                     "Scan {ScanId} for {Root} completed: {Nodes} package(s), {Edges} edge(s){Truncated}.",
                     scan.Id.Value,

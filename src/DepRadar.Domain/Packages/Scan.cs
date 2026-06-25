@@ -82,6 +82,21 @@ public sealed class Scan : IAggregateRoot
         CompletedAt = timestamp;
     }
 
+    /// <summary>
+    /// Returns a stuck (e.g. abandoned by a crashed worker) scan to the queue so it can
+    /// be retried. No-op if the scan already finished.
+    /// </summary>
+    public void Requeue()
+    {
+        if (Status is ScanStatus.Completed or ScanStatus.Failed)
+        {
+            return;
+        }
+
+        Status = ScanStatus.Queued;
+        StartedAt = null;
+    }
+
     private void EnsureNotFinished()
     {
         if (Status is ScanStatus.Completed or ScanStatus.Failed)

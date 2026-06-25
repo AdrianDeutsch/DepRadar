@@ -56,7 +56,7 @@ public sealed class PackageIngestionTests(PostgresFixture fixture) : IClassFixtu
     {
         await using var scope = provider.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<DepRadarDbContext>();
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.MigrateAsync();
     }
 
     private static async Task<PackageDto> SendAsync(IServiceProvider provider, IngestPackageCommand command)

@@ -43,6 +43,10 @@ public static class DependencyInjection
         string? anthropicApiKey = null,
         string? anthropicModel = null)
     {
+        // Caches external API responses (NuGet/OSV/deps.dev) so repeated scans don't
+        // burn quota; an idempotent re-scan hits the cache, not the network.
+        services.AddHybridCache();
+
         services.AddScoped<IPackageRepository, PackageRepository>();
         services.AddScoped<IScanRepository, ScanRepository>();
         services.AddScoped<IGraphRepository, GraphRepository>();

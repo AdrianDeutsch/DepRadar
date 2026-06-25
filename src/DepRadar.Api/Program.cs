@@ -33,6 +33,9 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddSignalR();
 builder.Services.AddHostedService<ScanProgressBroadcaster>();
 
+// Readiness: surface database connectivity on /health.
+builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
@@ -49,11 +52,10 @@ if (app.Environment.IsDevelopment())
     // Interactive API reference at /scalar/v1.
     app.MapScalarApiReference();
 
-    // Slice 1 bootstraps the schema with EnsureCreated; EF Core migrations are
-    // introduced with the persistence hardening (Slice 6).
+    // Apply EF Core migrations on startup (dev convenience).
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<DepRadarDbContext>();
-    await dbContext.Database.EnsureCreatedAsync();
+    await dbContext.Database.MigrateAsync();
 }
 
 app.MapPackageEndpoints();
