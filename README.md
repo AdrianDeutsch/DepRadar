@@ -30,9 +30,10 @@
   </tr>
 </table>
 
-> Captured live: a healthy 24-package graph (left) and a deprecated, archived package
-> that DepRadar flags across security, license and maintenance, with an upgrade verdict
-> (right). The dashboard deep-links to any scanned package via `/?package=<id>`.
+> Captured live: a healthy 24-package graph (left) and a deprecated/archived package
+> flagged across security, license and maintenance — with an upgrade verdict, an SBOM
+> download and a natural-language "ask the graph" answer (right). The dashboard
+> deep-links to any scanned package via `/?package=<id>`.
 
 ## Problem & solution
 
@@ -54,6 +55,10 @@ has: **"Is this upgrade worth it — and how risky is it?"**
 - 🤖 **LLM upgrade advisor** — RAG over changelogs + risk data, plus a graph chatbot.
 - 📦 **Whole-project scan** — paste a `.csproj` or `packages.lock.json` to scan every
   direct dependency at once (the "scan your own solution" use case).
+- 📋 **SBOM export** — download a standards-based **CycloneDX 1.5** SBOM (components,
+  licenses, CVEs and the dependency graph).
+- 💬 **Ask the graph** — natural-language questions ("which packages are unmaintained?")
+  answered over your dependency graph, deterministically (LLM optional).
 - ⚡ **Live updates** — SignalR streams scan progress in real time.
 
 > **All six slices are shipped.** An async, durable scan resolves a package's **full
@@ -179,6 +184,11 @@ curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/report
 # Scan a whole project — queues a scan per direct dependency
 curl -X POST http://localhost:<api-port>/api/projects/scan \
   -H "Content-Type: text/plain" --data-binary @MyApp.csproj
+
+# CycloneDX SBOM, and ask the graph a question
+curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/sbom
+curl -X POST http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/chat \
+  -H "Content-Type: application/json" -d '{"question":"which packages are unmaintained?"}'
 ```
 
 The **dashboard** is served at the API root (`/`): enter a package (or paste a whole

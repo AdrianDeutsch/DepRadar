@@ -17,6 +17,7 @@ public static class DependencyInjection
         // Scoped so the mediator resolves handlers (and their scoped DbContext) from
         // the ambient request/work scope rather than the root provider.
         services.AddScoped<ISender, Mediator>();
+        services.AddScoped<Risk.GraphAssessmentLoader>();
         services.TryAddSingleton(TimeProvider.System);
 
         RegisterHandlers(services);

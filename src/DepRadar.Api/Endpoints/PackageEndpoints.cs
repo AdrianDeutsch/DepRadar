@@ -1,8 +1,10 @@
+using DepRadar.Application.Chat;
 using DepRadar.Application.Graphs;
 using DepRadar.Application.Messaging;
 using DepRadar.Application.Packages;
 using DepRadar.Application.Reports;
 using DepRadar.Application.Risk;
+using DepRadar.Application.Sbom;
 using DepRadar.Application.Scans;
 using DepRadar.Application.Upgrades;
 
@@ -68,6 +70,18 @@ internal static class PackageEndpoints
             .Produces(StatusCodes.Status200OK, contentType: "text/markdown")
             .Produces(StatusCodes.Status404NotFound);
 
+        group.MapGet("/{id}/sbom", GetSbomAsync)
+            .WithName("GetPackageSbom")
+            .WithSummary("Returns a CycloneDX 1.5 SBOM (components, licenses, vulnerabilities, dependencies).")
+            .Produces(StatusCodes.Status200OK, contentType: "application/vnd.cyclonedx+json")
+            .Produces(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id}/chat", AskAsync)
+            .WithName("AskGraphQuestion")
+            .WithSummary("Answers a natural-language question about a scanned package's graph.")
+            .Produces<ChatAnswerDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
         return app;
     }
 
@@ -117,5 +131,17 @@ internal static class PackageEndpoints
     {
         var markdown = await sender.Send(new GetPackageReportQuery(id), cancellationToken);
         return markdown is null ? Results.NotFound() : Results.Text(markdown, "text/markdown");
+    }
+
+    private static async Task<IResult> GetSbomAsync(string id, ISender sender, CancellationToken cancellationToken)
+    {
+        var sbom = await sender.Send(new GetSbomQuery(id), cancellationToken);
+        return sbom is null ? Results.NotFound() : Results.Text(sbom, "application/vnd.cyclonedx+json");
+    }
+
+    private static async Task<IResult> AskAsync(string id, ChatRequest request, ISender sender, CancellationToken cancellationToken)
+    {
+        var answer = await sender.Send(new AskGraphQuestionQuery(id, request.Question), cancellationToken);
+        return answer is null ? Results.NotFound() : Results.Ok(answer);
     }
 }

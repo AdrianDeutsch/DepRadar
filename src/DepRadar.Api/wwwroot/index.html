@@ -63,7 +63,10 @@
         <div class="panel">
           <div class="panel-head">
             <h2>Risk ranking</h2>
-            <button id="reportButton" class="ghost">Download report</button>
+            <div class="panel-actions">
+              <button id="sbomButton" class="ghost">SBOM</button>
+              <button id="reportButton" class="ghost">Report</button>
+            </div>
           </div>
           <table id="riskTable">
             <thead>
@@ -83,6 +86,21 @@
       <div class="panel">
         <div class="panel-head"><h2>Upgrade advisor</h2></div>
         <div id="upgrade" class="upgrade"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Ask the graph</h2></div>
+        <div class="chat-input">
+          <input id="chatInput" type="text" placeholder="e.g. which packages are deprecated?" autocomplete="off" />
+          <button id="chatButton">Ask</button>
+        </div>
+        <div class="chat-suggestions">
+          <button class="suggest" data-q="Which packages are deprecated?">deprecated?</button>
+          <button class="suggest" data-q="Any known vulnerabilities?">vulnerabilities?</button>
+          <button class="suggest" data-q="What is the riskiest package?">riskiest?</button>
+          <button class="suggest" data-q="Any license concerns?">licenses?</button>
+        </div>
+        <div id="chatAnswer" class="chat-answer"></div>
       </div>
     </section>
   </main>

@@ -12,6 +12,10 @@ const els = {
   drill: document.getElementById("drill"),
   upgrade: document.getElementById("upgrade"),
   report: document.getElementById("reportButton"),
+  sbom: document.getElementById("sbomButton"),
+  chatInput: document.getElementById("chatInput"),
+  chatButton: document.getElementById("chatButton"),
+  chatAnswer: document.getElementById("chatAnswer"),
   projectToggle: document.getElementById("projectToggle"),
   projectPanel: document.getElementById("projectPanel"),
   projectInput: document.getElementById("projectInput"),
@@ -93,6 +97,7 @@ function setStatus(state, detail, failed) {
 async function loadResults(pkg) {
   currentPackage = pkg;
   els.intro.classList.add("hidden");
+  els.chatAnswer.innerHTML = "";
   setStatus("Completed", "rendering report…");
 
   const [graph, risk, upgrade] = await Promise.all([
@@ -271,6 +276,51 @@ function updateProjectChip(scan) {
   }
 }
 
+// ---- SBOM + chat -----------------------------------------------------------
+
+els.sbom.addEventListener("click", async () => {
+  if (!currentPackage) return;
+  const res = await fetch(`/api/packages/${encodeURIComponent(currentPackage)}/sbom`);
+  if (!res.ok) return;
+  const text = await res.text();
+  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${currentPackage}.cdx.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+els.chatButton.addEventListener("click", () => askChat(els.chatInput.value));
+els.chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") askChat(els.chatInput.value); });
+document.querySelectorAll(".suggest").forEach((b) =>
+  b.addEventListener("click", () => { els.chatInput.value = b.dataset.q; askChat(b.dataset.q); }));
+
+async function askChat(question) {
+  const q = (question || "").trim();
+  if (!q || !currentPackage) return;
+  els.chatButton.disabled = true;
+  els.chatAnswer.innerHTML = "<span class='ai'>thinking…</span>";
+  try {
+    const res = await fetch(`/api/packages/${encodeURIComponent(currentPackage)}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: q }),
+    });
+    if (!res.ok) throw new Error(`chat failed (${res.status})`);
+    const dto = await res.json();
+    const refs = dto.packages.length
+      ? `<div class="refs">${dto.packages.map((p) => `<span class="ref">${escapeHtml(p)}</span>`).join("")}</div>`
+      : "";
+    const note = dto.llmUsed ? "" : `<span class="ai">· rule-based (set an LLM key for AI answers)</span>`;
+    els.chatAnswer.innerHTML = `${escapeHtml(dto.answer)}${note}${refs}`;
+  } catch (err) {
+    els.chatAnswer.innerHTML = `<span class="ai" style="color:#f87171">${escapeHtml(err.message)}</span>`;
+  } finally {
+    els.chatButton.disabled = false;
+  }
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -279,13 +329,19 @@ function escapeHtml(value) {
 // Deep link: /?package=Some.Package loads a previously scanned package's report
 // directly (shareable link) and opens its worst finding.
 (function deepLink() {
-  const pkg = new URLSearchParams(location.search).get("package");
+  const params = new URLSearchParams(location.search);
+  const pkg = params.get("package");
   if (!pkg) return;
   els.input.value = pkg;
   setStatus("Completed", "loading stored report…");
   loadResults(pkg).then(() => {
     if (riskRows.length) {
       showDrill(riskRows.reduce((worst, p) => (p.score <= worst.score ? p : worst)));
+    }
+    const ask = params.get("ask");
+    if (ask) {
+      els.chatInput.value = ask;
+      askChat(ask);
     }
   });
 })();
