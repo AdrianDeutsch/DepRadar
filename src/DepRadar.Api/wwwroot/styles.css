@@ -153,6 +153,8 @@ tbody tr:hover { background: #16243a; }
 
 .drill { margin-top: 12px; font-size: 13px; color: var(--muted); }
 .drill ul { margin: 6px 0 0; padding-left: 18px; }
+.drill-path { margin-top: 8px; font-size: 12px; color: var(--muted); font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.drill-path::before { content: "↳ "; color: var(--high); }
 
 .upgrade .rec { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
 .upgrade .narrative { color: var(--muted); line-height: 1.5; }

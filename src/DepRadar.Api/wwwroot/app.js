@@ -35,6 +35,7 @@ const LEVEL_COLOR = {
 
 let currentPackage = null;
 let riskRows = [];
+let vulnPaths = {};
 let sortKey = "score";
 let sortAsc = true;
 let activeSingleScanId = null;
@@ -109,13 +110,17 @@ async function loadResults(pkg) {
   els.diffTo.value = "";
   setStatus("Completed", "rendering report…");
 
-  const [graph, risk, upgrade] = await Promise.all([
+  const [graph, risk, upgrade, paths] = await Promise.all([
     getJson(`/api/packages/${encodeURIComponent(pkg)}/graph`),
     getJson(`/api/packages/${encodeURIComponent(pkg)}/graph/risk`),
     getJson(`/api/packages/${encodeURIComponent(pkg)}/upgrade`),
+    getJson(`/api/packages/${encodeURIComponent(pkg)}/vulnerability-paths`),
   ]);
 
   if (!risk) return;
+
+  vulnPaths = {};
+  (paths ? paths.paths : []).forEach((p) => { vulnPaths[p.package.toLowerCase()] = p.path; });
 
   const levelByPkg = {};
   risk.packages.forEach((p) => { levelByPkg[p.packageId.toLowerCase()] = p.level; });
@@ -229,7 +234,11 @@ function showDrill(pkg) {
   }
   const items = pkg.findings.map((f) =>
     `<li><span class="badge ${f.level}">${f.level}</span> ${escapeHtml(f.category)}: ${escapeHtml(f.message)}</li>`).join("");
-  els.drill.innerHTML = `<strong>${escapeHtml(pkg.packageId)} ${escapeHtml(pkg.version)}</strong><ul>${items}</ul>`;
+  const path = vulnPaths[pkg.packageId.toLowerCase()];
+  const via = path && path.length > 1
+    ? `<div class="drill-path">pulled in via ${path.map((p) => escapeHtml(p)).join(" → ")}</div>`
+    : "";
+  els.drill.innerHTML = `<strong>${escapeHtml(pkg.packageId)} ${escapeHtml(pkg.version)}</strong><ul>${items}</ul>${via}`;
 }
 
 function renderUpgrade(advice) {

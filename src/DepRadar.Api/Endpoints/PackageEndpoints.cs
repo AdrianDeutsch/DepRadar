@@ -55,6 +55,12 @@ internal static class PackageEndpoints
             .Produces<PackageRiskDto>()
             .Produces(StatusCodes.Status404NotFound);
 
+        group.MapGet("/{id}/vulnerability-paths", GetVulnerabilityPathsAsync)
+            .WithName("GetVulnerabilityPaths")
+            .WithSummary("Traces the dependency path that pulled in each vulnerable package.")
+            .Produces<VulnerabilityPathsDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
         group.MapGet("/{id}/graph/risk", GetGraphRiskAsync)
             .WithName("GetPackageGraphRisk")
             .WithSummary("Returns the project-level risk across the transitive graph (worst first).")
@@ -139,6 +145,12 @@ internal static class PackageEndpoints
     {
         var risk = await sender.Send(new GetPackageRiskQuery(id), cancellationToken);
         return risk is null ? Results.NotFound() : Results.Ok(risk);
+    }
+
+    private static async Task<IResult> GetVulnerabilityPathsAsync(string id, ISender sender, CancellationToken cancellationToken)
+    {
+        var paths = await sender.Send(new GetVulnerabilityPathsQuery(id), cancellationToken);
+        return paths is null ? Results.NotFound() : Results.Ok(paths);
     }
 
     private static async Task<IResult> GetGraphRiskAsync(string id, ISender sender, CancellationToken cancellationToken)

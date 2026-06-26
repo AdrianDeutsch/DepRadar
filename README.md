@@ -58,6 +58,8 @@ has: **"Is this upgrade worth it — and how risky is it?"**
 - 📜 **License-shift detection** — flags SPDX license changes and the OSS → commercial
   pivot (the "MediatR case").
 - 🕸️ **Transitive graph** — direct *and* transitive dependencies with resolved versions.
+- 🧭 **Vulnerability paths** — for every vulnerable package, the exact dependency chain
+  that pulled it in (`root → A → B`), so you know *why* it's there and where to cut it.
 - 🧮 **Health scoring** — an explainable score per package and per project.
 - 🤖 **LLM upgrade advisor** — RAG over changelogs + risk data, plus a graph chatbot.
 - 📦 **Whole-project scan** — paste a `.csproj` or `packages.lock.json` to scan every
@@ -210,6 +212,9 @@ curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/graph
 # Risk report for the package, and the project-level rollup (worst first)
 curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/risk
 curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/graph/risk
+
+# Why is a transitive package vulnerable? — the dependency chain that pulled it in
+curl http://localhost:<api-port>/api/packages/WindowsAzure.Storage/vulnerability-paths
 
 # "Is this upgrade worth it?" — RAG over changelogs + risk (from/to optional)
 curl "http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/upgrade?from=5.0.0&to=6.0.0"
