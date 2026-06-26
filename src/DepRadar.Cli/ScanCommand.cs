@@ -2,6 +2,7 @@ using DepRadar.Application.Analysis;
 using DepRadar.Application.Policy;
 using DepRadar.Application.Projects;
 using DepRadar.Application.Risk;
+using DepRadar.Application.Sarif;
 using DepRadar.Application.Sbom;
 using DepRadar.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
@@ -75,6 +76,15 @@ internal static class ScanCommand
             if (!options.Json)
             {
                 Console.WriteLine($"  SBOM written to {sbomPath}");
+            }
+        }
+
+        if (options.SarifPath is { } sarifPath)
+        {
+            await File.WriteAllTextAsync(sarifPath, SarifBuilder.Build(graph, options.Target), cancellationToken);
+            if (!options.Json)
+            {
+                Console.WriteLine($"  SARIF written to {sarifPath}");
             }
         }
 

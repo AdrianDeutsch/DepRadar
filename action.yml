@@ -26,6 +26,10 @@ inputs:
     description: 'Optional path to also write a CycloneDX SBOM.'
     required: false
     default: ''
+  sarif:
+    description: 'Optional path to also write a SARIF report (upload it with github/codeql-action/upload-sarif).'
+    required: false
+    default: ''
   dotnet-version:
     description: 'The .NET SDK version used to install and run the tool.'
     required: false
@@ -73,6 +77,9 @@ runs:
         fi
         if [ -n "${{ inputs.sbom }}" ]; then
           scan_args+=(--sbom "${{ inputs.sbom }}")
+        fi
+        if [ -n "${{ inputs.sarif }}" ]; then
+          scan_args+=(--sarif "${{ inputs.sarif }}")
         fi
 
         depradar "${scan_args[@]}"

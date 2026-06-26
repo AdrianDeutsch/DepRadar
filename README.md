@@ -66,6 +66,8 @@ has: **"Is this upgrade worth it — and how risky is it?"**
   direct dependency at once (the "scan your own solution" use case).
 - 📋 **SBOM export** — download a standards-based **CycloneDX 1.5** SBOM (components,
   licenses, CVEs and the dependency graph).
+- 🔬 **SARIF + code scanning** — emit findings as **SARIF 2.1.0** (with the vuln path); the
+  GitHub Action uploads them so they land in the repo's **Security** tab.
 - 💬 **Ask the graph** — natural-language questions ("which packages are unmaintained?")
   answered over your dependency graph, deterministically (LLM optional).
 - 🔀 **Upgrade-impact diff** — compare two versions: added/removed dependencies, version
@@ -177,7 +179,7 @@ sequenceDiagram
 | AI / RAG      | **pgvector** + `ILanguageModel` seam (Claude) | Keyless local embedder + RAG; Claude narrative behind a key ([ADR 0006]). |
 | CLI           | `dotnet` global tool (`PackAsTool`)          | Stateless scan + policy gate for CI; no server, no database ([ADR 0009]). |
 | Caching       | `HybridCache` (in-memory L1 + **Redis** L2)  | Keeps idempotent re-scans off the upstream API quota.         |
-| Interop       | **CycloneDX 1.5** SBOM · shields-style badge | Standards-based export; embeddable health badge.              |
+| Interop       | **CycloneDX 1.5** SBOM · **SARIF 2.1.0** · badges | Standards-based export; findings in GitHub code scanning; embeddable badges. |
 | Alerts        | Slack webhook · GitHub issues (composite)    | Pluggable, multi-channel drift notifications ([ADR 0012]).    |
 | Orchestration | .NET Aspire 13                               | Wires API + Worker + Postgres + Redis + telemetry.            |
 | Resilience    | `Microsoft.Extensions.Http.Resilience`       | Retry, circuit breaker, timeout, rate limiter on every call.  |
@@ -226,8 +228,9 @@ curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/report
 curl -X POST http://localhost:<api-port>/api/projects/scan \
   -H "Content-Type: text/plain" --data-binary @MyApp.csproj
 
-# CycloneDX SBOM, and ask the graph a question
+# CycloneDX SBOM + SARIF (GitHub code scanning), and ask the graph a question
 curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/sbom
+curl http://localhost:<api-port>/api/packages/WindowsAzure.Storage/sarif
 curl -X POST http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/chat \
   -H "Content-Type: application/json" -d '{"question":"which packages are unmaintained?"}'
 
@@ -289,7 +292,7 @@ dotnet tool install --global --add-source ./artifacts/nupkg DepRadar.Tool
 
 # Scan a package or a whole project; exit code 1 fails the build on a policy breach
 depradar scan WindowsAzure.Storage --fail-on high --no-deprecated
-depradar scan ./MyApp.csproj --forbid copyleft --sbom sbom.json
+depradar scan ./MyApp.csproj --forbid copyleft --sbom sbom.json --sarif results.sarif
 
 # Compare two versions
 depradar diff Newtonsoft.Json 12.0.3 13.0.3
@@ -301,7 +304,8 @@ Exit codes: `0` policy passed · `1` policy violated · `2` usage error.
 
 The CLI ships as a composite [GitHub Action](action.yml). DepRadar **dogfoods it** —
 [`dependency-health`](.github/workflows/depradar.yml) gates DepRadar's own dependencies
-on every push and uploads a CycloneDX SBOM artifact. In another repository:
+on every push, uploads a CycloneDX SBOM artifact, and **publishes a SARIF report to the
+Security tab**. In another repository:
 
 ```yaml
 - uses: AdrianDeutsch/DepRadar@v1
@@ -311,6 +315,11 @@ on every push and uploads a CycloneDX SBOM artifact. In another repository:
     no-deprecated: true
     forbid: copyleft                 # comma-separated license categories
     sbom: sbom.json                  # optional CycloneDX export
+    sarif: results.sarif             # optional SARIF for code scanning
+- uses: github/codeql-action/upload-sarif@v3
+  if: always()
+  with:
+    sarif_file: results.sarif
 ```
 
 The step fails the workflow on a policy violation — a real, shift-left dependency gate.
@@ -429,6 +438,8 @@ dotnet test           # unit + architecture + integration (needs Docker)
 - [x] **Full drift lifecycle & visibility:** issues **auto-close** on recovery, a
       background **retention** job bounds history, a **drift-status badge** per package,
       and a `depradar.drift.open` **OpenTelemetry gauge**.
+- [x] **Explainable & exportable findings:** **vulnerability paths** (why a transitive
+      package is here) and **SARIF 2.1.0** export uploaded to GitHub code scanning ([ADR 0013]).
 
 ## License & credits
 
@@ -446,3 +457,4 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0010]: docs/adr/0010-scan-history-and-drift.md
 [ADR 0011]: docs/adr/0011-autonomous-monitoring-and-badge.md
 [ADR 0012]: docs/adr/0012-multi-channel-alerts-and-digest.md
+[ADR 0013]: docs/adr/0013-explainable-and-exportable-findings.md

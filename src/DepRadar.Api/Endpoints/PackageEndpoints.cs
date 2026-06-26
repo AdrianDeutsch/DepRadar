@@ -7,6 +7,7 @@ using DepRadar.Application.Messaging;
 using DepRadar.Application.Packages;
 using DepRadar.Application.Reports;
 using DepRadar.Application.Risk;
+using DepRadar.Application.Sarif;
 using DepRadar.Application.Sbom;
 using DepRadar.Application.Scans;
 using DepRadar.Application.Upgrades;
@@ -77,6 +78,12 @@ internal static class PackageEndpoints
             .WithName("GetPackageReport")
             .WithSummary("Returns an audit-ready Markdown report for a scanned package.")
             .Produces(StatusCodes.Status200OK, contentType: "text/markdown")
+            .Produces(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id}/sarif", GetSarifAsync)
+            .WithName("GetSarif")
+            .WithSummary("Returns a SARIF 2.1.0 report of the findings (for GitHub code scanning).")
+            .Produces(StatusCodes.Status200OK, contentType: "application/sarif+json")
             .Produces(StatusCodes.Status404NotFound);
 
         group.MapGet("/{id}/sbom", GetSbomAsync)
@@ -169,6 +176,12 @@ internal static class PackageEndpoints
     {
         var markdown = await sender.Send(new GetPackageReportQuery(id), cancellationToken);
         return markdown is null ? Results.NotFound() : Results.Text(markdown, "text/markdown");
+    }
+
+    private static async Task<IResult> GetSarifAsync(string id, ISender sender, CancellationToken cancellationToken)
+    {
+        var sarif = await sender.Send(new GetSarifQuery(id), cancellationToken);
+        return sarif is null ? Results.NotFound() : Results.Text(sarif, "application/sarif+json");
     }
 
     private static async Task<IResult> GetSbomAsync(string id, ISender sender, CancellationToken cancellationToken)

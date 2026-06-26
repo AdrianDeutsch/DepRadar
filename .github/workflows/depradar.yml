@@ -14,6 +14,9 @@ on:
 jobs:
   gate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # upload the SARIF report to code scanning
     steps:
       - uses: actions/checkout@v5
 
@@ -31,9 +34,18 @@ jobs:
           target: src/DepRadar.Api/DepRadar.Api.csproj
           fail-on: critical
           sbom: depradar-sbom.json
+          sarif: depradar.sarif
           tool-source: ./artifacts/nupkg
 
+      - name: Upload SARIF to code scanning
+        if: always() # report findings even when the gate fails
+        continue-on-error: true # forks lack security-events: write
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: depradar.sarif
+
       - name: Upload SBOM
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cyclonedx-sbom

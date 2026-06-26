@@ -10,6 +10,7 @@ namespace DepRadar.Cli;
 /// <param name="AllowDeprecated">Whether deprecated packages are tolerated.</param>
 /// <param name="ForbiddenLicenses">License categories that fail the policy.</param>
 /// <param name="SbomPath">Optional path to also write a CycloneDX SBOM.</param>
+/// <param name="SarifPath">Optional path to also write a SARIF report (for code scanning).</param>
 /// <param name="Json">Whether to emit machine-readable JSON.</param>
 internal sealed record CliOptions(
     string Target,
@@ -17,6 +18,7 @@ internal sealed record CliOptions(
     bool AllowDeprecated,
     IReadOnlySet<LicenseCategory> ForbiddenLicenses,
     string? SbomPath,
+    string? SarifPath,
     bool Json)
 {
     /// <summary>The usage banner.</summary>
@@ -28,6 +30,7 @@ internal sealed record CliOptions(
           --no-deprecated                                      Fail when any package is deprecated
           --forbid <permissive|weakcopyleft|copyleft|unknown>  Forbid a license category (repeatable)
           --sbom <path>                                        Also write a CycloneDX SBOM to <path>
+          --sarif <path>                                       Also write a SARIF report to <path> (GitHub code scanning)
           --json                                               Emit JSON instead of text
 
         Exit codes: 0 = policy passed, 1 = policy violated, 2 = usage error.
@@ -47,6 +50,7 @@ internal sealed record CliOptions(
         var allowDeprecated = true;
         var forbidden = new HashSet<LicenseCategory>();
         string? sbomPath = null;
+        string? sarifPath = null;
         var json = false;
 
         for (var i = 0; i < args.Length; i++)
@@ -86,6 +90,15 @@ internal sealed record CliOptions(
 
                     break;
 
+                case "--sarif":
+                    if (!TryTakeValue(args, ref i, out sarifPath))
+                    {
+                        error = "--sarif requires a file path.";
+                        return false;
+                    }
+
+                    break;
+
                 case "--json":
                     json = true;
                     break;
@@ -114,7 +127,7 @@ internal sealed record CliOptions(
             return false;
         }
 
-        options = new CliOptions(target, failOn, allowDeprecated, forbidden, sbomPath, json);
+        options = new CliOptions(target, failOn, allowDeprecated, forbidden, sbomPath, sarifPath, json);
         return true;
     }
 
