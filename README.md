@@ -70,7 +70,10 @@ has: **"Is this upgrade worth it — and how risky is it?"**
 - 📈 **Drift over time** — every scan is snapshotted, so the dashboard shows what *rotted
   since you last looked*: a dependency that newly became vulnerable, deprecated or archived.
 - 🔔 **Autonomous monitoring** — an opt-in watchlist re-scans tracked packages on a schedule
-  and **alerts a Slack webhook** the moment a new high-severity CVE (or deprecation) lands.
+  and, the moment a new high-severity CVE (or deprecation) lands, **alerts Slack and/or opens
+  a GitHub issue** (pluggable, multi-channel).
+- 📰 **Drift digest** — a single Markdown report of what changed across *every* tracked
+  package since the last scan (a daily summary you can pipe anywhere).
 - 🏷️ **Health badge** — a shields-style `badge.svg` per package to drop into any README.
 - 🧰 **CLI / CI gate** — `depradar scan` as a `dotnet tool` runs the **whole analysis
   standalone** (no server, no database) and **fails the build** on policy violations.
@@ -215,6 +218,9 @@ curl http://localhost:<api-port>/api/packages/WindowsAzure.Storage/drift
 
 # A shields-style health badge (embed in a README)
 curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/badge.svg
+
+# A Markdown drift digest across every tracked package
+curl http://localhost:<api-port>/api/drift/digest
 ```
 
 ### Health badge
@@ -232,12 +238,16 @@ Set two config values and DepRadar watches your dependencies for you:
 ```jsonc
 // appsettings / environment / Aspire parameters
 "Watch": { "IntervalHours": 24 },                 // re-scan every tracked package daily
-"Alerts": { "SlackWebhookUrl": "https://hooks.slack.com/services/…" }
+"Alerts": {
+  "SlackWebhookUrl": "https://hooks.slack.com/services/…",  // optional channel
+  "GitHubRepo": "owner/name"                                // optional channel (uses GitHub:Token)
+}
 ```
 
 The worker re-scans every previously-scanned package on the interval; when a re-scan
-introduces a **new high-severity** issue (CVE, deprecation, archival) it posts a drift
-alert to the Slack webhook. Both are off by default — no webhook, no schedule, no noise.
+introduces a **new high-severity** issue (CVE, deprecation, archival) it fans the alert out
+to **every configured channel** — Slack, a GitHub issue, or both. Everything is off by
+default: no webhook, no repo, no schedule, no noise.
 
 ### CLI — scan and gate a build, with no server or database
 
@@ -377,6 +387,9 @@ dotnet test           # unit + architecture + integration (needs Docker)
 - [x] **Autonomous monitoring:** bounded snapshot retention, an opt-in **watchlist** that
       re-scans on a schedule, **Slack drift alerts** on new high-severity issues, and a
       shields-style **health badge** ([ADR 0011]).
+- [x] **Multi-channel alerts & digest:** a pluggable notifier that also **opens GitHub
+      issues** (fan-out to every configured channel), and a Markdown **drift digest**
+      across all tracked packages ([ADR 0012]).
 
 ## License & credits
 
@@ -393,3 +406,4 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0009]: docs/adr/0009-stateless-analysis-cli-and-policy.md
 [ADR 0010]: docs/adr/0010-scan-history-and-drift.md
 [ADR 0011]: docs/adr/0011-autonomous-monitoring-and-badge.md
+[ADR 0012]: docs/adr/0012-multi-channel-alerts-and-digest.md

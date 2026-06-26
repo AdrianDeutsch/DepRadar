@@ -30,7 +30,8 @@ builder.Services.AddInfrastructure(
     builder.Configuration["Anthropic:ApiKey"],
     builder.Configuration["Anthropic:Model"],
     builder.Configuration["GitHub:Token"],
-    builder.Configuration["Alerts:SlackWebhookUrl"]);
+    builder.Configuration["Alerts:SlackWebhookUrl"],
+    builder.Configuration["Alerts:GitHubRepo"]);
 
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
@@ -69,6 +70,7 @@ if (app.Environment.IsDevelopment())
 app.MapPackageEndpoints();
 app.MapScanEndpoints();
 app.MapProjectEndpoints();
+app.MapDriftEndpoints();
 app.MapHub<ScanHub>("/hubs/scan");
 
 await app.RunAsync();

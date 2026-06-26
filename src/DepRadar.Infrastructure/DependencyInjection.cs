@@ -40,6 +40,7 @@ public static class DependencyInjection
     /// <param name="anthropicModel">Anthropic model id (defaults to a current Claude model).</param>
     /// <param name="gitHubToken">GitHub token (optional) to raise the repo-health API rate limit.</param>
     /// <param name="slackWebhookUrl">Slack incoming-webhook URL (optional) for drift alerts.</param>
+    /// <param name="gitHubAlertRepo">GitHub <c>owner/name</c> (optional) to open drift-alert issues in.</param>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         string? depsDevBaseUrl = null,
@@ -48,7 +49,8 @@ public static class DependencyInjection
         string? anthropicApiKey = null,
         string? anthropicModel = null,
         string? gitHubToken = null,
-        string? slackWebhookUrl = null)
+        string? slackWebhookUrl = null,
+        string? gitHubAlertRepo = null)
     {
         // Caches external API responses (NuGet/OSV/deps.dev) so repeated scans don't
         // burn quota; an idempotent re-scan hits the cache, not the network.
@@ -67,7 +69,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<DepRadarDbContext>());
 
         AddLanguageModel(services, anthropicApiKey, anthropicModel);
-        AddDriftNotifier(services, slackWebhookUrl);
+        AddDriftNotifier(services, slackWebhookUrl, gitHubToken, gitHubAlertRepo);
 
         services.AddHttpClient<IPackageMetadataSource, DepsDevPackageMetadataSource>(client =>
             {
@@ -129,17 +131,58 @@ public static class DependencyInjection
 
     // Wires Claude when an API key is present; otherwise a null model so the upgrade
     // advisor falls back to a deterministic templated narrative (works keyless).
-    /// <summary>Wires the Slack drift webhook when configured, else a no-op notifier.</summary>
-    private static void AddDriftNotifier(IServiceCollection services, string? slackWebhookUrl)
+    /// <summary>
+    /// Composes the configured drift channels (Slack webhook, GitHub issues). With none
+    /// configured it falls back to a no-op notifier — alerting stays opt-in.
+    /// </summary>
+    private static void AddDriftNotifier(IServiceCollection services, string? slackWebhookUrl, string? gitHubToken, string? gitHubAlertRepo)
     {
-        if (string.IsNullOrWhiteSpace(slackWebhookUrl))
+        var hasSlack = !string.IsNullOrWhiteSpace(slackWebhookUrl);
+        var hasGitHub = !string.IsNullOrWhiteSpace(gitHubAlertRepo);
+
+        if (hasSlack)
         {
-            services.AddScoped<IDriftNotifier, NullDriftNotifier>();
-            return;
+            services.AddHttpClient<SlackDriftNotifier>(client => client.BaseAddress = new Uri(slackWebhookUrl!))
+                .AddStandardResilienceHandler();
         }
 
-        services.AddHttpClient<IDriftNotifier, SlackDriftNotifier>(client => client.BaseAddress = new Uri(slackWebhookUrl))
-            .AddStandardResilienceHandler();
+        if (hasGitHub)
+        {
+            services.AddSingleton(new GitHubAlertOptions(gitHubAlertRepo!));
+            services.AddHttpClient<GitHubIssueDriftNotifier>(client =>
+                {
+                    client.BaseAddress = new Uri("https://api.github.com/");
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("DepRadar");
+                    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+                    client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
+                    if (!string.IsNullOrWhiteSpace(gitHubToken))
+                    {
+                        client.DefaultRequestHeaders.Authorization = new("Bearer", gitHubToken);
+                    }
+                })
+                .AddStandardResilienceHandler();
+        }
+
+        services.AddScoped<IDriftNotifier>(provider =>
+        {
+            var channels = new List<IDriftNotifier>();
+            if (hasSlack)
+            {
+                channels.Add(provider.GetRequiredService<SlackDriftNotifier>());
+            }
+
+            if (hasGitHub)
+            {
+                channels.Add(provider.GetRequiredService<GitHubIssueDriftNotifier>());
+            }
+
+            return channels.Count switch
+            {
+                0 => new NullDriftNotifier(),
+                1 => channels[0],
+                _ => new CompositeDriftNotifier(channels),
+            };
+        });
     }
 
     private static void AddLanguageModel(IServiceCollection services, string? apiKey, string? model)

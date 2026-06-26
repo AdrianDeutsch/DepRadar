@@ -112,6 +112,25 @@ public sealed class DriftTests(PostgresFixture fixture) : IClassFixture<Postgres
         }
     }
 
+    [Fact]
+    public async Task Digest_summarizes_drift_across_tracked_roots()
+    {
+        await using var provider = BuildProvider(fixture.ConnectionString);
+        await MigrateAsync(provider);
+
+        var july = new DateTimeOffset(2026, 7, 1, 0, 0, 0, TimeSpan.Zero);
+        await AddSnapshotAsync(provider, "DigestRoot", july, 100, RiskLevel.None,
+            new PackageRiskState("digestroot", "1.0.0", 100, RiskLevel.None, false, false, false, [], "MIT"));
+        await AddSnapshotAsync(provider, "DigestRoot", july.AddDays(1), 40, RiskLevel.High,
+            new PackageRiskState("digestroot", "1.0.0", 40, RiskLevel.High, true, false, false, ["GHSA-digest"], "MIT"));
+
+        var digest = await SendAsync(provider, new GetDriftDigestQuery());
+
+        digest.ShouldContain("# DepRadar drift digest");
+        digest.ShouldContain("digestroot");
+        digest.ShouldContain(nameof(DriftEventKind.BecameDeprecated));
+    }
+
     private static async Task AddSnapshotAsync(
         IServiceProvider provider,
         string root,
