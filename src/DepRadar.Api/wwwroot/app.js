@@ -20,6 +20,8 @@ const els = {
   diffTo: document.getElementById("diffTo"),
   diffButton: document.getElementById("diffButton"),
   diffResult: document.getElementById("diffResult"),
+  driftMeta: document.getElementById("driftMeta"),
+  driftResult: document.getElementById("driftResult"),
   projectToggle: document.getElementById("projectToggle"),
   projectPanel: document.getElementById("projectPanel"),
   projectInput: document.getElementById("projectInput"),
@@ -126,6 +128,43 @@ async function loadResults(pkg) {
 
   els.results.classList.remove("hidden");
   setStatus("Completed", `${risk.packagesAssessed} packages assessed`);
+
+  loadDrift(pkg);
+}
+
+async function loadDrift(pkg) {
+  els.driftMeta.textContent = "";
+  els.driftResult.innerHTML = "<span class='ai'>loading history…</span>";
+  const drift = await getJson(`/api/packages/${encodeURIComponent(pkg)}/drift`);
+  if (!drift) { els.driftResult.innerHTML = "<span class='ai'>no scan history yet</span>"; return; }
+
+  if (!drift.hasBaseline) {
+    els.driftResult.innerHTML = "<span class='ai'>baseline recorded — re-scan later to track drift over time</span>";
+    return;
+  }
+
+  const since = new Date(drift.from).toLocaleString();
+  const delta = drift.netHealthDelta > 0 ? `+${drift.netHealthDelta}` : `${drift.netHealthDelta}`;
+  const deltaClass = drift.netHealthDelta > 0 ? "good" : drift.netHealthDelta < 0 ? "bad" : "";
+  els.driftMeta.innerHTML = `since ${escapeHtml(since)} · net health <span class="diff-delta ${deltaClass}">${delta}</span>`;
+
+  if (!drift.events.length) {
+    els.driftResult.innerHTML = "<span class='ai'>no changes since the previous scan</span>";
+    return;
+  }
+
+  const sev = (s) => (s === "None" ? "good" : s === "Medium" ? "warn" : s === "Low" ? "" : "bad");
+  els.driftResult.innerHTML = `<ul class="drift-list">${drift.events.map((e) =>
+    `<li class="${sev(e.severity)}"><span class="drift-kind">${escapeHtml(driftLabel(e.kind))}</span> `
+    + `<span class="drift-pkg">${escapeHtml(e.package)}</span> — ${escapeHtml(e.detail)}</li>`).join("")}</ul>`;
+}
+
+function driftLabel(kind) {
+  return ({
+    BecameVulnerable: "▲ vulnerable", BecameDeprecated: "▲ deprecated", BecameArchived: "▲ archived",
+    BecameStale: "▲ stale", HealthRegressed: "▼ health", HealthImproved: "△ health",
+    AdvisoryCleared: "✓ cleared", PackageAdded: "+ added", PackageRemoved: "− removed",
+  })[kind] || kind;
 }
 
 async function getJson(url) {

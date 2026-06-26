@@ -1,7 +1,9 @@
 using DepRadar.Application.Abstractions;
 using DepRadar.Application.Exceptions;
+using DepRadar.Application.History;
 using DepRadar.Application.Messaging;
 using DepRadar.Application.Observability;
+using DepRadar.Application.Risk;
 using DepRadar.Domain.Packages;
 using DepRadar.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -23,6 +25,8 @@ public sealed class RunScanHandler(
     IRiskRepository riskRepository,
     IChangelogIndexer changelogIndexer,
     IRepositoryHealthEnricher repositoryHealthEnricher,
+    GraphAssessmentLoader assessmentLoader,
+    IScanSnapshotRepository snapshots,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
     ILogger<RunScanHandler> logger)
@@ -87,7 +91,37 @@ public sealed class RunScanHandler(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // History: record a snapshot of the completed scan so drift can be detected
+        // against the next one. Best-effort — a snapshot failure must not fail the scan.
+        if (scan.Status == ScanStatus.Completed)
+        {
+            await RecordSnapshotAsync(scan.RootPackageId, cancellationToken);
+        }
+
         return ScanDto.FromDomain(scan);
+    }
+
+    /// <summary>Captures the assessed graph as an append-only snapshot for drift detection.</summary>
+    private async Task RecordSnapshotAsync(PackageId root, CancellationToken cancellationToken)
+    {
+#pragma warning disable CA1031 // Best-effort: drift history must never break the scan pipeline.
+        try
+        {
+            var assessment = await assessmentLoader.LoadAsync(root, cancellationToken);
+            if (assessment is null)
+            {
+                return;
+            }
+
+            await snapshots.AddAsync(SnapshotFactory.From(assessment, timeProvider.GetUtcNow()), cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Failed to record a drift snapshot for {Root}.", root.Original);
+        }
+#pragma warning restore CA1031
     }
 
     /// <summary>Maps the resolved graph to domain entities and persists it idempotently.</summary>

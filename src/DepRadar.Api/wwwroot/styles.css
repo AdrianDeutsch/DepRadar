@@ -194,3 +194,14 @@ tbody tr:hover { background: #16243a; }
 .diff-title.good { color: var(--none); }
 .diff-title.bad { color: var(--high); }
 .diff-result ul { margin: 5px 0 0; padding-left: 18px; color: var(--muted); line-height: 1.5; }
+
+.drift-result { font-size: 14px; }
+.drift-result .ai { font-size: 12px; color: #5b6b82; }
+.drift-list { margin: 0; padding: 0; list-style: none; }
+.drift-list li { padding: 7px 0; border-bottom: 1px solid var(--border); color: var(--muted); }
+.drift-list li:last-child { border-bottom: none; }
+.drift-kind { font-weight: 700; margin-right: 6px; }
+.drift-list li.bad .drift-kind { color: var(--high); }
+.drift-list li.warn .drift-kind { color: var(--medium); }
+.drift-list li.good .drift-kind { color: var(--none); }
+.drift-pkg { color: var(--text); }

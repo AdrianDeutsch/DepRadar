@@ -1,4 +1,5 @@
 using DepRadar.Application.Abstractions;
+using DepRadar.Domain.History;
 using DepRadar.Domain.Packages;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,6 +35,9 @@ public sealed class DepRadarDbContext(DbContextOptions<DepRadarDbContext> option
 
     /// <summary>Embedded changelog chunks for RAG.</summary>
     public DbSet<ChangelogChunk> ChangelogChunks => Set<ChangelogChunk>();
+
+    /// <summary>Append-only per-scan risk snapshots, the history drift is computed from.</summary>
+    public DbSet<ScanSnapshot> ScanSnapshots => Set<ScanSnapshot>();
 
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -55,6 +55,7 @@ public static class DependencyInjection
         services.AddScoped<IGraphRepository, GraphRepository>();
         services.AddScoped<IRiskRepository, RiskRepository>();
         services.AddScoped<IChangelogRepository, ChangelogRepository>();
+        services.AddScoped<IScanSnapshotRepository, ScanSnapshotRepository>();
         services.AddScoped<IChangelogIndexer, ChangelogIndexer>();
         services.AddScoped<IRepositoryHealthEnricher, RepositoryHealthEnricher>();
         services.AddScoped<IDependencyGraphResolver, DependencyGraphResolver>();

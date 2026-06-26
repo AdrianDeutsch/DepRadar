@@ -1,6 +1,7 @@
 using DepRadar.Application.Chat;
 using DepRadar.Application.Diff;
 using DepRadar.Application.Graphs;
+using DepRadar.Application.History;
 using DepRadar.Application.Messaging;
 using DepRadar.Application.Packages;
 using DepRadar.Application.Reports;
@@ -90,6 +91,12 @@ internal static class PackageEndpoints
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound);
 
+        group.MapGet("/{id}/drift", GetDriftAsync)
+            .WithName("GetDrift")
+            .WithSummary("How the package's dependency health drifted since the previous scan.")
+            .Produces<DriftReportDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
         return app;
     }
 
@@ -162,5 +169,11 @@ internal static class PackageEndpoints
 
         var diff = await sender.Send(new GetUpgradeDiffQuery(id, from, to), cancellationToken);
         return diff is null ? Results.NotFound() : Results.Ok(diff);
+    }
+
+    private static async Task<IResult> GetDriftAsync(string id, ISender sender, CancellationToken cancellationToken)
+    {
+        var drift = await sender.Send(new GetDriftQuery(id), cancellationToken);
+        return drift is null ? Results.NotFound() : Results.Ok(drift);
     }
 }

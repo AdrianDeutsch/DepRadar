@@ -30,14 +30,15 @@
   </tr>
   <tr>
     <td width="50%"><img src="docs/assets/diff.png" alt="Upgrade-impact diff clearing a CVE" /></td>
-    <td width="50%"><img src="docs/assets/graph.png" alt="A larger transitive dependency graph" /></td>
+    <td width="50%"><img src="docs/assets/drift.png" alt="Drift since the previous scan" /></td>
   </tr>
 </table>
 
 > Captured live: a healthy 24-package graph and a deprecated/archived package flagged
 > across security, license and maintenance — with an upgrade verdict, an SBOM download
 > and a natural-language "ask the graph" answer. Bottom-left, the **upgrade-impact diff**
-> shows Newtonsoft 12.0.3 → 13.0.3 clearing a CVE for **+30 health**. The dashboard
+> shows Newtonsoft 12.0.3 → 13.0.3 clearing a CVE for **+30 health**; bottom-right, the
+> **drift** panel shows what rotted since the previous scan (net health −65). The dashboard
 > deep-links to any scanned package via `/?package=<id>` (and `&ask=` / `&diff=`).
 
 ## Problem & solution
@@ -66,6 +67,8 @@ has: **"Is this upgrade worth it — and how risky is it?"**
   answered over your dependency graph, deterministically (LLM optional).
 - 🔀 **Upgrade-impact diff** — compare two versions: added/removed dependencies, version
   changes, and the CVEs an upgrade introduces *or clears* (e.g. Newtonsoft 12 → 13 = +30 health).
+- 📈 **Drift over time** — every scan is snapshotted, so the dashboard shows what *rotted
+  since you last looked*: a dependency that newly became vulnerable, deprecated or archived.
 - 🧰 **CLI / CI gate** — `depradar scan` as a `dotnet tool` runs the **whole analysis
   standalone** (no server, no database) and **fails the build** on policy violations.
 - ⚡ **Live updates** — SignalR streams scan progress in real time.
@@ -203,6 +206,9 @@ curl -X POST http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/chat
 
 # Upgrade-impact diff — what does moving 12.0.3 → 13.0.3 add, remove, break or fix?
 curl "http://localhost:<api-port>/api/packages/Newtonsoft.Json/diff?from=12.0.3&to=13.0.3"
+
+# Drift — how has the package's health changed since the previous scan?
+curl http://localhost:<api-port>/api/packages/WindowsAzure.Storage/drift
 ```
 
 ### CLI — scan and gate a build, with no server or database
@@ -337,8 +343,9 @@ dotnet test           # unit + architecture + integration (needs Docker)
 - [x] **Slice 6 — Hardening:** HybridCache for external responses, EF Core migrations
       (incl. pgvector), a stale-scan reaper, custom OpenTelemetry, and a DB health check.
 - [x] **Beyond the slices:** whole-project scan, **CycloneDX SBOM**, graph **chatbot**,
-      **upgrade-impact diff**, and a **`dotnet tool` CLI + policy gate** that runs the
-      whole analysis standalone for CI ([ADR 0009]).
+      **upgrade-impact diff**, a **`dotnet tool` CLI + policy gate** that runs the whole
+      analysis standalone for CI ([ADR 0009]), and **drift history** — every scan is
+      snapshotted so the dashboard surfaces what changed since last time ([ADR 0010]).
 
 ## License & credits
 
@@ -353,3 +360,4 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0006]: docs/adr/0006-llm-rag-and-injection-defense.md
 [ADR 0008]: docs/adr/0008-production-hardening.md
 [ADR 0009]: docs/adr/0009-stateless-analysis-cli-and-policy.md
+[ADR 0010]: docs/adr/0010-scan-history-and-drift.md
