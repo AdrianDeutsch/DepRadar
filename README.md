@@ -34,12 +34,13 @@
   </tr>
 </table>
 
-> Captured live: a healthy 24-package graph and a deprecated/archived package flagged
-> across security, license and maintenance — with an upgrade verdict, an SBOM download
-> and a natural-language "ask the graph" answer. Bottom-left, the **upgrade-impact diff**
-> shows Newtonsoft 12.0.3 → 13.0.3 clearing a CVE for **+30 health**; bottom-right, the
-> **drift** panel shows what rotted since the previous scan (net health −65). The dashboard
-> deep-links to any scanned package via `/?package=<id>` (and `&ask=` / `&diff=`).
+> Captured live against the current dashboard: a **healthy 24-package graph** (top-left)
+> and a **deprecated/archived package** flagged across security, license and maintenance
+> with an upgrade verdict + SBOM export (top-right). Bottom-left, the **upgrade-impact
+> diff** shows Newtonsoft 12.0.3 → 13.0.3 clearing a CVE for **+30 health**; bottom-right,
+> the full dashboard with the **drift** panel — what rotted since the previous scan (net
+> health −65) — above the "ask the graph" chat. Deep-link any scanned package via
+> `/?package=<id>` (and `&ask=` / `&diff=`).
 
 ## Problem & solution
 

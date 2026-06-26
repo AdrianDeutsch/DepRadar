@@ -3,10 +3,10 @@
 | Asset           | What it shows                                                        |
 | --------------- | -------------------------------------------------------------------- |
 | `banner.svg`    | Repository header banner.                                            |
-| `demo.gif`      | Dashboard tour: landing → healthy graph → a risky package flagged.   |
+| `demo.gif`      | Dashboard tour: landing → healthy graph → risky findings → upgrade diff → drift. |
 | `landing.png`   | The landing view (intro + clickable example packages).              |
 | `dashboard.png` | A healthy 24-package transitive graph + sortable risk ranking.       |
-| `risk.png`      | A risky package flagged across categories, + SBOM, upgrade advice & graph chat. |
+| `risk.png`      | A risky package flagged across security, license & maintenance, + SBOM & upgrade advice. |
 | `diff.png`      | Upgrade-impact diff: Newtonsoft 12.0.3 → 13.0.3 clears a CVE (+30 health). |
 | `drift.png`     | Drift since the previous scan: newly deprecated/archived/vulnerable (−65 health). |
 | `badges.png`    | Shields-style health (healthy / risky / not scanned) + drift (clear / N issues / no baseline) badges. |
