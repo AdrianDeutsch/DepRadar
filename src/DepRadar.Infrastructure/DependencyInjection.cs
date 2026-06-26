@@ -1,10 +1,12 @@
 using System.Net;
 using DepRadar.Application.Abstractions;
+using DepRadar.Application.History;
 using DepRadar.Infrastructure.Ai;
 using DepRadar.Infrastructure.External.DepsDev;
 using DepRadar.Infrastructure.External.GitHub;
 using DepRadar.Infrastructure.External.NuGet;
 using DepRadar.Infrastructure.External.Osv;
+using DepRadar.Infrastructure.Notifications;
 using DepRadar.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +39,7 @@ public static class DependencyInjection
     /// <param name="anthropicApiKey">Anthropic API key; when set, the live Claude advisor is used.</param>
     /// <param name="anthropicModel">Anthropic model id (defaults to a current Claude model).</param>
     /// <param name="gitHubToken">GitHub token (optional) to raise the repo-health API rate limit.</param>
+    /// <param name="slackWebhookUrl">Slack incoming-webhook URL (optional) for drift alerts.</param>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         string? depsDevBaseUrl = null,
@@ -44,7 +47,8 @@ public static class DependencyInjection
         string? osvBaseUrl = null,
         string? anthropicApiKey = null,
         string? anthropicModel = null,
-        string? gitHubToken = null)
+        string? gitHubToken = null,
+        string? slackWebhookUrl = null)
     {
         // Caches external API responses (NuGet/OSV/deps.dev) so repeated scans don't
         // burn quota; an idempotent re-scan hits the cache, not the network.
@@ -63,6 +67,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<DepRadarDbContext>());
 
         AddLanguageModel(services, anthropicApiKey, anthropicModel);
+        AddDriftNotifier(services, slackWebhookUrl);
 
         services.AddHttpClient<IPackageMetadataSource, DepsDevPackageMetadataSource>(client =>
             {
@@ -124,6 +129,19 @@ public static class DependencyInjection
 
     // Wires Claude when an API key is present; otherwise a null model so the upgrade
     // advisor falls back to a deterministic templated narrative (works keyless).
+    /// <summary>Wires the Slack drift webhook when configured, else a no-op notifier.</summary>
+    private static void AddDriftNotifier(IServiceCollection services, string? slackWebhookUrl)
+    {
+        if (string.IsNullOrWhiteSpace(slackWebhookUrl))
+        {
+            services.AddScoped<IDriftNotifier, NullDriftNotifier>();
+            return;
+        }
+
+        services.AddHttpClient<IDriftNotifier, SlackDriftNotifier>(client => client.BaseAddress = new Uri(slackWebhookUrl))
+            .AddStandardResilienceHandler();
+    }
+
     private static void AddLanguageModel(IServiceCollection services, string? apiKey, string? model)
     {
         if (string.IsNullOrWhiteSpace(apiKey))

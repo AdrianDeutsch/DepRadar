@@ -4,6 +4,7 @@ using DepRadar.Application.History;
 using DepRadar.Application.Messaging;
 using DepRadar.Application.Observability;
 using DepRadar.Application.Risk;
+using DepRadar.Domain.History;
 using DepRadar.Domain.Packages;
 using DepRadar.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -27,11 +28,15 @@ public sealed class RunScanHandler(
     IRepositoryHealthEnricher repositoryHealthEnricher,
     GraphAssessmentLoader assessmentLoader,
     IScanSnapshotRepository snapshots,
+    IDriftNotifier driftNotifier,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
     ILogger<RunScanHandler> logger)
     : IRequestHandler<RunScanCommand, ScanDto>
 {
+    // Drift needs only the last two snapshots; keep a short trail for the history view.
+    private const int MaxSnapshotsPerRoot = 50;
+
     /// <inheritdoc />
     public async Task<ScanDto> Handle(RunScanCommand request, CancellationToken cancellationToken)
     {
@@ -116,12 +121,33 @@ public sealed class RunScanHandler(
 
             await snapshots.AddAsync(SnapshotFactory.From(assessment, timeProvider.GetUtcNow()), cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // Retention: keep history bounded to the most recent N snapshots per root.
+            await snapshots.PruneAsync(root, MaxSnapshotsPerRoot, cancellationToken);
+
+            await AlertOnDriftAsync(root, cancellationToken);
         }
         catch (Exception exception)
         {
             logger.LogWarning(exception, "Failed to record a drift snapshot for {Root}.", root.Original);
         }
 #pragma warning restore CA1031
+    }
+
+    /// <summary>Compares the two latest snapshots and pushes an alert when high-severity risk newly appears.</summary>
+    private async Task AlertOnDriftAsync(PackageId root, CancellationToken cancellationToken)
+    {
+        var recent = await snapshots.GetRecentAsync(root, 2, cancellationToken);
+        if (recent.Count < 2)
+        {
+            return;
+        }
+
+        var drift = DriftAnalyzer.Compare(recent[1], recent[0]);
+        if (DriftAlert.Actionable(drift).Count > 0)
+        {
+            await driftNotifier.NotifyAsync(drift, cancellationToken);
+        }
     }
 
     /// <summary>Maps the resolved graph to domain entities and persists it idempotently.</summary>

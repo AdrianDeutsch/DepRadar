@@ -29,7 +29,8 @@ builder.Services.AddInfrastructure(
     builder.Configuration["Osv:BaseUrl"],
     builder.Configuration["Anthropic:ApiKey"],
     builder.Configuration["Anthropic:Model"],
-    builder.Configuration["GitHub:Token"]);
+    builder.Configuration["GitHub:Token"],
+    builder.Configuration["Alerts:SlackWebhookUrl"]);
 
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();

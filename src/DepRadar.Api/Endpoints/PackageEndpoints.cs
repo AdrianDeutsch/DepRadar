@@ -1,3 +1,4 @@
+using DepRadar.Application.Badges;
 using DepRadar.Application.Chat;
 using DepRadar.Application.Diff;
 using DepRadar.Application.Graphs;
@@ -97,6 +98,11 @@ internal static class PackageEndpoints
             .Produces<DriftReportDto>()
             .Produces(StatusCodes.Status404NotFound);
 
+        group.MapGet("/{id}/badge.svg", GetBadgeAsync)
+            .WithName("GetBadge")
+            .WithSummary("A shields-style SVG health badge for embedding in a README.")
+            .Produces(StatusCodes.Status200OK, contentType: "image/svg+xml");
+
         return app;
     }
 
@@ -175,5 +181,11 @@ internal static class PackageEndpoints
     {
         var drift = await sender.Send(new GetDriftQuery(id), cancellationToken);
         return drift is null ? Results.NotFound() : Results.Ok(drift);
+    }
+
+    private static async Task<IResult> GetBadgeAsync(string id, ISender sender, CancellationToken cancellationToken)
+    {
+        var svg = await sender.Send(new GetBadgeQuery(id), cancellationToken);
+        return Results.Text(svg, "image/svg+xml");
     }
 }

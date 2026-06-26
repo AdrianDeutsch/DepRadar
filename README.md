@@ -69,6 +69,9 @@ has: **"Is this upgrade worth it — and how risky is it?"**
   changes, and the CVEs an upgrade introduces *or clears* (e.g. Newtonsoft 12 → 13 = +30 health).
 - 📈 **Drift over time** — every scan is snapshotted, so the dashboard shows what *rotted
   since you last looked*: a dependency that newly became vulnerable, deprecated or archived.
+- 🔔 **Autonomous monitoring** — an opt-in watchlist re-scans tracked packages on a schedule
+  and **alerts a Slack webhook** the moment a new high-severity CVE (or deprecation) lands.
+- 🏷️ **Health badge** — a shields-style `badge.svg` per package to drop into any README.
 - 🧰 **CLI / CI gate** — `depradar scan` as a `dotnet tool` runs the **whole analysis
   standalone** (no server, no database) and **fails the build** on policy violations.
 - ⚡ **Live updates** — SignalR streams scan progress in real time.
@@ -209,7 +212,32 @@ curl "http://localhost:<api-port>/api/packages/Newtonsoft.Json/diff?from=12.0.3&
 
 # Drift — how has the package's health changed since the previous scan?
 curl http://localhost:<api-port>/api/packages/WindowsAzure.Storage/drift
+
+# A shields-style health badge (embed in a README)
+curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/badge.svg
 ```
+
+### Health badge
+
+<p align="center"><img src="docs/assets/badges.png" alt="DepRadar health badges" width="320" /></p>
+
+```markdown
+![dependency health](http://<your-host>/api/packages/Serilog.Sinks.Console/badge.svg)
+```
+
+### Autonomous monitoring (opt-in)
+
+Set two config values and DepRadar watches your dependencies for you:
+
+```jsonc
+// appsettings / environment / Aspire parameters
+"Watch": { "IntervalHours": 24 },                 // re-scan every tracked package daily
+"Alerts": { "SlackWebhookUrl": "https://hooks.slack.com/services/…" }
+```
+
+The worker re-scans every previously-scanned package on the interval; when a re-scan
+introduces a **new high-severity** issue (CVE, deprecation, archival) it posts a drift
+alert to the Slack webhook. Both are off by default — no webhook, no schedule, no noise.
 
 ### CLI — scan and gate a build, with no server or database
 
@@ -346,6 +374,9 @@ dotnet test           # unit + architecture + integration (needs Docker)
       **upgrade-impact diff**, a **`dotnet tool` CLI + policy gate** that runs the whole
       analysis standalone for CI ([ADR 0009]), and **drift history** — every scan is
       snapshotted so the dashboard surfaces what changed since last time ([ADR 0010]).
+- [x] **Autonomous monitoring:** bounded snapshot retention, an opt-in **watchlist** that
+      re-scans on a schedule, **Slack drift alerts** on new high-severity issues, and a
+      shields-style **health badge** ([ADR 0011]).
 
 ## License & credits
 
@@ -361,3 +392,4 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0008]: docs/adr/0008-production-hardening.md
 [ADR 0009]: docs/adr/0009-stateless-analysis-cli-and-policy.md
 [ADR 0010]: docs/adr/0010-scan-history-and-drift.md
+[ADR 0011]: docs/adr/0011-autonomous-monitoring-and-badge.md

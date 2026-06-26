@@ -9,6 +9,7 @@
 | `risk.png`      | A risky package flagged across categories, + SBOM, upgrade advice & graph chat. |
 | `diff.png`      | Upgrade-impact diff: Newtonsoft 12.0.3 → 13.0.3 clears a CVE (+30 health). |
 | `drift.png`     | Drift since the previous scan: newly deprecated/archived/vulnerable (−65 health). |
+| `badges.png`    | The shields-style health badges (healthy / risky / not scanned).    |
 | `graph.png`     | A larger (28-package) dependency graph.                              |
 
 These were captured live from the running dashboard. To re-capture, run the app and
