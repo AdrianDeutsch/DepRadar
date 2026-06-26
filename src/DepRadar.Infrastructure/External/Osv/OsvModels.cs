@@ -22,3 +22,18 @@ internal sealed record OsvVulnerability(
 
 /// <summary>Advisory database-specific metadata (carries the GitHub-style severity label).</summary>
 internal sealed record OsvDatabaseSpecific(string? Severity);
+
+// Projection of the OSV.dev /v1/vulns/{id} response — enough to read the patched
+// version out of an advisory's affected ranges (used for remediation).
+
+/// <summary>A full advisory keyed by id, with its affected packages/ranges.</summary>
+internal sealed record OsvAdvisory(IReadOnlyList<OsvAffected>? Affected);
+
+/// <summary>One affected package within an advisory, with its version ranges.</summary>
+internal sealed record OsvAffected(OsvPackage? Package, IReadOnlyList<OsvRange>? Ranges);
+
+/// <summary>A version range as a list of introduced/fixed events.</summary>
+internal sealed record OsvRange(IReadOnlyList<OsvEvent>? Events);
+
+/// <summary>A range boundary event (one of <c>introduced</c> / <c>fixed</c> is set).</summary>
+internal sealed record OsvEvent(string? Introduced, string? Fixed);

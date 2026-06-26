@@ -36,6 +36,8 @@ const LEVEL_COLOR = {
 let currentPackage = null;
 let riskRows = [];
 let vulnPaths = {};
+let remediations = {};
+let currentDrillPkg = null;
 let sortKey = "score";
 let sortAsc = true;
 let activeSingleScanId = null;
@@ -135,6 +137,14 @@ async function loadResults(pkg) {
   setStatus("Completed", `${risk.packagesAssessed} packages assessed`);
 
   loadDrift(pkg);
+  loadRemediations(pkg);
+}
+
+async function loadRemediations(pkg) {
+  remediations = {};
+  const data = await getJson(`/api/packages/${encodeURIComponent(pkg)}/remediation`);
+  (data ? data.remediations : []).forEach((r) => { remediations[r.package.toLowerCase()] = r.safeVersion; });
+  if (currentDrillPkg) showDrill(currentDrillPkg); // re-render the open drill with the fix
 }
 
 async function loadDrift(pkg) {
@@ -228,17 +238,23 @@ function renderTable() {
 }
 
 function showDrill(pkg) {
+  currentDrillPkg = pkg;
   if (!pkg.findings.length) {
     els.drill.innerHTML = `<strong>${escapeHtml(pkg.packageId)} ${escapeHtml(pkg.version)}</strong> — no findings.`;
     return;
   }
   const items = pkg.findings.map((f) =>
     `<li><span class="badge ${f.level}">${f.level}</span> ${escapeHtml(f.category)}: ${escapeHtml(f.message)}</li>`).join("");
-  const path = vulnPaths[pkg.packageId.toLowerCase()];
+  const key = pkg.packageId.toLowerCase();
+  const path = vulnPaths[key];
   const via = path && path.length > 1
     ? `<div class="drill-path">pulled in via ${path.map((p) => escapeHtml(p)).join(" → ")}</div>`
     : "";
-  els.drill.innerHTML = `<strong>${escapeHtml(pkg.packageId)} ${escapeHtml(pkg.version)}</strong><ul>${items}</ul>${via}`;
+  const safe = remediations[key];
+  const fix = safe
+    ? `<div class="drill-fix">fix available: upgrade to ${escapeHtml(safe)}</div>`
+    : "";
+  els.drill.innerHTML = `<strong>${escapeHtml(pkg.packageId)} ${escapeHtml(pkg.version)}</strong><ul>${items}</ul>${via}${fix}`;
 }
 
 function renderUpgrade(advice) {

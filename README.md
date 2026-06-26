@@ -60,6 +60,8 @@ has: **"Is this upgrade worth it — and how risky is it?"**
 - 🕸️ **Transitive graph** — direct *and* transitive dependencies with resolved versions.
 - 🧭 **Vulnerability paths** — for every vulnerable package, the exact dependency chain
   that pulled it in (`root → A → B`), so you know *why* it's there and where to cut it.
+- 🛠️ **Remediation** — the **minimal safe upgrade** per vulnerable package: the smallest
+  version that clears every advisory (read from OSV's patched ranges), shown as a fix hint.
 - 🧮 **Health scoring** — an explainable score per package and per project.
 - 🤖 **LLM upgrade advisor** — RAG over changelogs + risk data, plus a graph chatbot.
 - 📦 **Whole-project scan** — paste a `.csproj` or `packages.lock.json` to scan every
@@ -217,6 +219,9 @@ curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/graph/risk
 
 # Why is a transitive package vulnerable? — the dependency chain that pulled it in
 curl http://localhost:<api-port>/api/packages/WindowsAzure.Storage/vulnerability-paths
+
+# Remediation — the minimal safe upgrade for each vulnerable package
+curl http://localhost:<api-port>/api/packages/WindowsAzure.Storage/remediation
 
 # "Is this upgrade worth it?" — RAG over changelogs + risk (from/to optional)
 curl "http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/upgrade?from=5.0.0&to=6.0.0"
@@ -440,6 +445,8 @@ dotnet test           # unit + architecture + integration (needs Docker)
       and a `depradar.drift.open` **OpenTelemetry gauge**.
 - [x] **Explainable & exportable findings:** **vulnerability paths** (why a transitive
       package is here) and **SARIF 2.1.0** export uploaded to GitHub code scanning ([ADR 0013]).
+- [x] **Remediation:** the **minimal safe upgrade** per vulnerable package — the smallest
+      version that clears every advisory, read from OSV's patched ranges ([ADR 0014]).
 
 ## License & credits
 
@@ -458,3 +465,4 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0011]: docs/adr/0011-autonomous-monitoring-and-badge.md
 [ADR 0012]: docs/adr/0012-multi-channel-alerts-and-digest.md
 [ADR 0013]: docs/adr/0013-explainable-and-exportable-findings.md
+[ADR 0014]: docs/adr/0014-remediation-minimal-safe-upgrade.md

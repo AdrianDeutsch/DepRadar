@@ -5,6 +5,7 @@ using DepRadar.Application.Graphs;
 using DepRadar.Application.History;
 using DepRadar.Application.Messaging;
 using DepRadar.Application.Packages;
+using DepRadar.Application.Remediation;
 using DepRadar.Application.Reports;
 using DepRadar.Application.Risk;
 using DepRadar.Application.Sarif;
@@ -60,6 +61,12 @@ internal static class PackageEndpoints
             .WithName("GetVulnerabilityPaths")
             .WithSummary("Traces the dependency path that pulled in each vulnerable package.")
             .Produces<VulnerabilityPathsDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id}/remediation", GetRemediationAsync)
+            .WithName("GetRemediation")
+            .WithSummary("The minimal safe upgrade for each vulnerable package (the smallest version clearing the CVE).")
+            .Produces<RemediationsDto>()
             .Produces(StatusCodes.Status404NotFound);
 
         group.MapGet("/{id}/graph/risk", GetGraphRiskAsync)
@@ -158,6 +165,12 @@ internal static class PackageEndpoints
     {
         var paths = await sender.Send(new GetVulnerabilityPathsQuery(id), cancellationToken);
         return paths is null ? Results.NotFound() : Results.Ok(paths);
+    }
+
+    private static async Task<IResult> GetRemediationAsync(string id, ISender sender, CancellationToken cancellationToken)
+    {
+        var remediation = await sender.Send(new GetRemediationsQuery(id), cancellationToken);
+        return remediation is null ? Results.NotFound() : Results.Ok(remediation);
     }
 
     private static async Task<IResult> GetGraphRiskAsync(string id, ISender sender, CancellationToken cancellationToken)
