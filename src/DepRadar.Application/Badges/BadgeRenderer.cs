@@ -9,22 +9,40 @@ namespace DepRadar.Application.Badges;
 /// </summary>
 public static class BadgeRenderer
 {
-    private const string Label = "DepRadar";
-
     /// <summary>A health badge: score + a one-word verdict, coloured by risk level.</summary>
     public static string RenderHealth(int score, RiskLevel level)
     {
         var value = string.Create(CultureInfo.InvariantCulture, $"{score} {Verdict(level)}");
-        return Render(value, Color(level));
+        return Render("DepRadar", value, Color(level));
     }
 
     /// <summary>A neutral badge for a package that has not been scanned.</summary>
-    public static string RenderUnknown() => Render("not scanned", "#9f9f9f");
+    public static string RenderUnknown() => Render("DepRadar", "not scanned", "#9f9f9f");
 
-    private static string Render(string value, string color)
+    /// <summary>
+    /// A drift-status badge: <c>clear</c> (green), <c>N issue(s)</c> (orange) or
+    /// <c>no baseline</c> (grey) when fewer than two scans exist.
+    /// </summary>
+    public static string RenderDrift(int actionableCount, bool hasBaseline)
+    {
+        if (!hasBaseline)
+        {
+            return Render("drift", "no baseline", "#9f9f9f");
+        }
+
+        if (actionableCount == 0)
+        {
+            return Render("drift", "clear", "#4c1");
+        }
+
+        var value = string.Create(CultureInfo.InvariantCulture, $"{actionableCount} {(actionableCount == 1 ? "issue" : "issues")}");
+        return Render("drift", value, "#fe7d37");
+    }
+
+    private static string Render(string label, string value, string color)
     {
         // Approximate text widths (no font metrics available server-side).
-        var labelWidth = (Label.Length * 7) + 12;
+        var labelWidth = (label.Length * 7) + 12;
         var valueWidth = (value.Length * 7) + 12;
         var total = labelWidth + valueWidth;
         var labelMid = labelWidth / 2;
@@ -34,7 +52,7 @@ public static class BadgeRenderer
         return string.Create(
             CultureInfo.InvariantCulture,
             $"""
-            <svg xmlns="http://www.w3.org/2000/svg" width="{total}" height="20" role="img" aria-label="{Label}: {safeValue}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="{total}" height="20" role="img" aria-label="{label}: {safeValue}">
               <linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient>
               <clipPath id="r"><rect width="{total}" height="20" rx="3" fill="#fff"/></clipPath>
               <g clip-path="url(#r)">
@@ -43,8 +61,8 @@ public static class BadgeRenderer
                 <rect width="{total}" height="20" fill="url(#s)"/>
               </g>
               <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
-                <text x="{labelMid}" y="15" fill="#010101" fill-opacity=".3">{Label}</text>
-                <text x="{labelMid}" y="14">{Label}</text>
+                <text x="{labelMid}" y="15" fill="#010101" fill-opacity=".3">{label}</text>
+                <text x="{labelMid}" y="14">{label}</text>
                 <text x="{valueMid}" y="15" fill="#010101" fill-opacity=".3">{safeValue}</text>
                 <text x="{valueMid}" y="14">{safeValue}</text>
               </g>

@@ -74,7 +74,8 @@ has: **"Is this upgrade worth it — and how risky is it?"**
   a GitHub issue** (pluggable, multi-channel).
 - 📰 **Drift digest** — a single Markdown report of what changed across *every* tracked
   package since the last scan (a daily summary you can pipe anywhere).
-- 🏷️ **Health badge** — a shields-style `badge.svg` per package to drop into any README.
+- 🏷️ **Badges & metrics** — shields-style `badge.svg` per package for **health** *and*
+  **drift status** (clear / N issues), plus an OpenTelemetry **gauge** of packages currently in drift.
 - 🧰 **CLI / CI gate** — `depradar scan` as a `dotnet tool` runs the **whole analysis
   standalone** (no server, no database) and **fails the build** on policy violations.
 - ⚡ **Live updates** — SignalR streams scan progress in real time.
@@ -177,7 +178,7 @@ sequenceDiagram
 | Alerts        | Slack webhook · GitHub issues (composite)    | Pluggable, multi-channel drift notifications ([ADR 0012]).    |
 | Orchestration | .NET Aspire 13                               | Wires API + Worker + Postgres + Redis + telemetry.            |
 | Resilience    | `Microsoft.Extensions.Http.Resilience`       | Retry, circuit breaker, timeout, rate limiter on every call.  |
-| Observability | OpenTelemetry (via Aspire)                   | Traces, metrics, logs.                                        |
+| Observability | OpenTelemetry (via Aspire)                   | Traces, metrics, logs — incl. a `depradar.drift.open` gauge.  |
 
 ## Getting started
 
@@ -230,19 +231,21 @@ curl "http://localhost:<api-port>/api/packages/Newtonsoft.Json/diff?from=12.0.3&
 # Drift — how has the package's health changed since the previous scan?
 curl http://localhost:<api-port>/api/packages/WindowsAzure.Storage/drift
 
-# A shields-style health badge (embed in a README)
+# Shields-style badges: package health, and current drift status
 curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/badge.svg
+curl http://localhost:<api-port>/api/packages/Serilog.Sinks.Console/drift/badge.svg
 
 # A Markdown drift digest across every tracked package
 curl http://localhost:<api-port>/api/drift/digest
 ```
 
-### Health badge
+### Health & drift badges
 
-<p align="center"><img src="docs/assets/badges.png" alt="DepRadar health badges" width="320" /></p>
+<p align="center"><img src="docs/assets/badges.png" alt="DepRadar health and drift badges" width="560" /></p>
 
 ```markdown
 ![dependency health](http://<your-host>/api/packages/Serilog.Sinks.Console/badge.svg)
+![dependency drift](http://<your-host>/api/packages/Serilog.Sinks.Console/drift/badge.svg)
 ```
 
 ### Autonomous monitoring (opt-in)
@@ -417,6 +420,9 @@ dotnet test           # unit + architecture + integration (needs Docker)
 - [x] **Multi-channel alerts & digest:** a pluggable notifier that also **opens GitHub
       issues** (fan-out to every configured channel), and a Markdown **drift digest**
       across all tracked packages ([ADR 0012]).
+- [x] **Full drift lifecycle & visibility:** issues **auto-close** on recovery, a
+      background **retention** job bounds history, a **drift-status badge** per package,
+      and a `depradar.drift.open` **OpenTelemetry gauge**.
 
 ## License & credits
 

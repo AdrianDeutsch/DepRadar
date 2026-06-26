@@ -142,11 +142,13 @@ public sealed class RunScanHandler(
         var drift = DriftAnalyzer.Compare(recent[1], recent[0]);
         if (DriftAlert.Actionable(drift).Count > 0)
         {
+            DepRadarTelemetry.MarkDrift(root.Value);
             await driftNotifier.NotifyAsync(drift, cancellationToken);
         }
         else
         {
             // Drift has cleared: let channels close any alert they opened for this package.
+            DepRadarTelemetry.ClearDrift(root.Value);
             await driftNotifier.ResolveAsync(root, cancellationToken);
         }
     }

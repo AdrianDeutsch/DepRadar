@@ -49,5 +49,12 @@ addition that reuses the same assessment.
   (`Retention:IntervalHours` / `Retention:MaxSnapshotsPerRoot`, sensible defaults) that
   prunes every root on a schedule — so a scan never pays for cleanup, and retention is one
   tunable place rather than a constant in the hot path.
+- **Drift status badge.** `BadgeRenderer` gained `RenderDrift` (clear / N issues / no
+  baseline); `GET /packages/{id}/drift/badge.svg` renders it from the same two-snapshot
+  comparison the alerts use. The health badge is now one of two README-embeddable badges.
+- **Open-drift gauge.** `DepRadarTelemetry` exposes a `depradar.drift.open`
+  `ObservableGauge` backed by an in-process set the scan handler marks/clears as drift
+  appears and resolves — a live count of packages in actionable drift, on the existing
+  OpenTelemetry meter. (In-process by design; the worker that runs scans owns the count.)
 
 [ADR 0010]: 0010-scan-history-and-drift.md

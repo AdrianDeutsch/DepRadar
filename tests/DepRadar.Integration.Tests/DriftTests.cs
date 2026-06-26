@@ -135,6 +135,27 @@ public sealed class DriftTests(PostgresFixture fixture) : IClassFixture<Postgres
     }
 
     [Fact]
+    public async Task Drift_status_badge_reflects_no_baseline_then_open_issues()
+    {
+        await using var provider = BuildProvider(fixture.ConnectionString);
+        await MigrateAsync(provider);
+
+        // No history yet → "no baseline".
+        (await SendAsync(provider, new GetDriftBadgeQuery("BadgeFresh"))).ShouldContain("no baseline");
+
+        // A healthy baseline then a risky latest → actionable drift → "issue(s)".
+        var august = new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero);
+        await AddSnapshotAsync(provider, "BadgeDrift", august, 100, RiskLevel.None,
+            new PackageRiskState("badgedrift", "1.0.0", 100, RiskLevel.None, false, false, false, [], "MIT"));
+        await AddSnapshotAsync(provider, "BadgeDrift", august.AddDays(1), 40, RiskLevel.High,
+            new PackageRiskState("badgedrift", "1.0.0", 40, RiskLevel.High, true, false, false, ["GHSA-badge"], "MIT"));
+
+        var badge = await SendAsync(provider, new GetDriftBadgeQuery("BadgeDrift"));
+        badge.ShouldStartWith("<svg");
+        badge.ShouldContain("issue");
+    }
+
+    [Fact]
     public async Task Digest_summarizes_drift_across_tracked_roots()
     {
         await using var provider = BuildProvider(fixture.ConnectionString);

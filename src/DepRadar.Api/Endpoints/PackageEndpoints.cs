@@ -103,6 +103,11 @@ internal static class PackageEndpoints
             .WithSummary("A shields-style SVG health badge for embedding in a README.")
             .Produces(StatusCodes.Status200OK, contentType: "image/svg+xml");
 
+        group.MapGet("/{id}/drift/badge.svg", GetDriftBadgeAsync)
+            .WithName("GetDriftBadge")
+            .WithSummary("A shields-style SVG badge of current drift status (clear / N issues / no baseline).")
+            .Produces(StatusCodes.Status200OK, contentType: "image/svg+xml");
+
         return app;
     }
 
@@ -186,6 +191,12 @@ internal static class PackageEndpoints
     private static async Task<IResult> GetBadgeAsync(string id, ISender sender, CancellationToken cancellationToken)
     {
         var svg = await sender.Send(new GetBadgeQuery(id), cancellationToken);
+        return Results.Text(svg, "image/svg+xml");
+    }
+
+    private static async Task<IResult> GetDriftBadgeAsync(string id, ISender sender, CancellationToken cancellationToken)
+    {
+        var svg = await sender.Send(new GetDriftBadgeQuery(id), cancellationToken);
         return Results.Text(svg, "image/svg+xml");
     }
 }
