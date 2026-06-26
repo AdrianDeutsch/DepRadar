@@ -38,8 +38,18 @@ Domain (the risk + drift model) stays untouched.
   best-effort (one flaky channel never blocks the others, and never fails a scan).
 - Each feature demonstrably spans the layers it should and **adds nothing to the Domain**,
   which is the point of the dependency-inversion boundaries.
-- GitHub issues are created per drift (no de-dup/labels yet); with the opt-in, interval-
-  bounded watchlist that is at most one issue per package per interval — refinement
-  (find-or-update an open issue) is noted as a follow-up.
+- GitHub issues started out one-per-drift; de-duplication is now in (see follow-ups).
+
+## Follow-ups since shipped
+
+- **GitHub issue de-duplication.** Each root now has a **stable** issue title
+  (`DepRadar: drift in {root}`). The notifier first lists open issues and, if one matches,
+  **comments** on it (with the latest, timestamped body) instead of opening a duplicate —
+  so a package's drift lives in a single ongoing thread. Falls back to creating the issue
+  when none exists.
+- **Scheduled digest delivery.** A new `IDigestNotifier` seam (Null by default,
+  `SlackDigestNotifier` when a webhook is set) plus a worker `DigestScheduleService`
+  (opt-in `Digest:IntervalHours`) post the cross-package digest on a schedule — but only
+  when something actually drifted, so a clean period stays silent.
 
 [ADR 0011]: 0011-autonomous-monitoring-and-badge.md

@@ -96,34 +96,42 @@ Clean Architecture with a strictly **inward** dependency direction, enforced in 
 ```mermaid
 flowchart TB
     subgraph P["Presentation — three hosts on one core"]
-        API["Web API (Minimal API + Scalar)"]
-        WK["Worker (Channels pipeline · Slice 2)"]
-        CLI["CLI (dotnet tool · stateless, DB-free)"]
-    end
-    subgraph I["Infrastructure"]
-        EF["EF Core 10 · PostgreSQL"]
-        DEPS["deps.dev client · resilient HttpClient"]
+        API["Web API · Minimal API + SignalR + Scalar<br/>(scan · graph · risk · upgrade · report · SBOM · chat · diff · drift · badge)"]
+        WK["Worker · Channels pipeline<br/>(ingest · stale-scan reaper · watchlist · scheduled digest)"]
+        CLI["CLI · dotnet tool<br/>(scan + policy gate · diff — stateless, DB-free)"]
     end
     subgraph A["Application"]
         UC["Use cases · hand-rolled Mediator"]
+        SVC["Pure services · ProjectAnalyzer · GraphDiffer<br/>· DriftAnalyzer · PolicyEvaluator · CycloneDX · BadgeRenderer"]
         PORTS["Ports (interfaces)"]
     end
-    subgraph D["Domain"]
-        MODEL["Entities · Value Objects (PackageId, SemVer, SpdxLicense)"]
+    subgraph I["Infrastructure (implements ports)"]
+        EF["EF Core 10 · PostgreSQL + pgvector<br/>repos · scan snapshots · migrations"]
+        EXT["Resilient HttpClients<br/>NuGet · OSV · deps.dev · GitHub"]
+        SUP["HybridCache + Redis · ILanguageModel<br/>· drift notifiers (Slack · GitHub · composite)"]
+    end
+    subgraph D["Domain (dependency-free)"]
+        MODEL["Entities · Value Objects<br/>PackageRiskScorer · DriftAnalyzer · DriftAlert"]
     end
 
     API --> UC
     WK --> UC
     CLI --> UC
+    UC --> SVC
     UC --> PORTS
-    UC --> MODEL
+    SVC --> MODEL
     EF -. implements .-> PORTS
-    DEPS -. implements .-> PORTS
+    EXT -. implements .-> PORTS
+    SUP -. implements .-> PORTS
     EF --> MODEL
 
     classDef domain fill:#16241b,stroke:#34d399,color:#e6edf3;
     class MODEL domain;
 ```
+
+The **CLI host** resolves only the network-backed ports (NuGet/OSV/GitHub) — never EF —
+so it runs the whole analysis with no database. Every feature above is a thin composition
+over the same Domain model; the arrows only ever point inward.
 
 Async, durable scan pipeline (Slice 2):
 
@@ -145,6 +153,8 @@ sequenceDiagram
     W->>NG: resolve transitive graph (ranges to versions, retry + breaker)
     NG-->>W: registration + dependencies
     W->>DB: upsert packages / versions / edges (idempotent), mark Completed
+    W->>DB: record risk snapshot (prune to newest N)
+    W->>W: diff vs previous snapshot — on new high-severity drift, alert Slack / GitHub
 
     User->>API: GET /api/packages/{id}/graph
     API->>DB: recursive CTE (transitive closure)
@@ -157,11 +167,15 @@ sequenceDiagram
 | ------------- | -------------------------------------------- | ------------------------------------------------------------- |
 | Runtime       | .NET 10 (LTS) / C# 14                         | Long-term support; modern language features.                  |
 | Web           | ASP.NET Core Minimal API + **SignalR**       | Thin HTTP surface; live scan progress to the dashboard.       |
-| Pipeline      | Worker Service + `System.Threading.Channels` | Ingestion decoupled from the API (Slice 2).                   |
-| Persistence   | PostgreSQL + EF Core 10                       | Graph as flat tables + recursive CTEs; `pgvector` for RAG.    |
+| Pipeline      | Worker Service + `System.Threading.Channels` | Ingestion, the watchlist and the scheduled digest, decoupled from the API. |
+| Persistence   | PostgreSQL + EF Core 10                       | Graph as flat tables + recursive CTEs; `pgvector` for RAG; `jsonb` drift snapshots. |
 | CQRS          | **Hand-rolled mediator** (MIT)               | No commercially-licensed MediatR in the core ([ADR 0002]).    |
 | AI / RAG      | **pgvector** + `ILanguageModel` seam (Claude) | Keyless local embedder + RAG; Claude narrative behind a key ([ADR 0006]). |
-| Orchestration | .NET Aspire 13                               | Wires API + Worker + Postgres + telemetry.                    |
+| CLI           | `dotnet` global tool (`PackAsTool`)          | Stateless scan + policy gate for CI; no server, no database ([ADR 0009]). |
+| Caching       | `HybridCache` (in-memory L1 + **Redis** L2)  | Keeps idempotent re-scans off the upstream API quota.         |
+| Interop       | **CycloneDX 1.5** SBOM · shields-style badge | Standards-based export; embeddable health badge.              |
+| Alerts        | Slack webhook · GitHub issues (composite)    | Pluggable, multi-channel drift notifications ([ADR 0012]).    |
+| Orchestration | .NET Aspire 13                               | Wires API + Worker + Postgres + Redis + telemetry.            |
 | Resilience    | `Microsoft.Extensions.Http.Resilience`       | Retry, circuit breaker, timeout, rate limiter on every call.  |
 | Observability | OpenTelemetry (via Aspire)                   | Traces, metrics, logs.                                        |
 
@@ -237,7 +251,8 @@ Set two config values and DepRadar watches your dependencies for you:
 
 ```jsonc
 // appsettings / environment / Aspire parameters
-"Watch": { "IntervalHours": 24 },                 // re-scan every tracked package daily
+"Watch":  { "IntervalHours": 24 },                // re-scan every tracked package daily
+"Digest": { "IntervalHours": 24 },                // deliver the drift digest to Slack daily
 "Alerts": {
   "SlackWebhookUrl": "https://hooks.slack.com/services/…",  // optional channel
   "GitHubRepo": "owner/name"                                // optional channel (uses GitHub:Token)
@@ -246,8 +261,11 @@ Set two config values and DepRadar watches your dependencies for you:
 
 The worker re-scans every previously-scanned package on the interval; when a re-scan
 introduces a **new high-severity** issue (CVE, deprecation, archival) it fans the alert out
-to **every configured channel** — Slack, a GitHub issue, or both. Everything is off by
-default: no webhook, no repo, no schedule, no noise.
+to **every configured channel** — Slack, a GitHub issue, or both. GitHub alerts
+**de-duplicate**: one stable issue per package, so a repeat alert comments on the existing
+open issue rather than opening a new one. A separate schedule delivers the **drift digest**
+to Slack (only when something actually changed). Everything is off by default: no webhook,
+no repo, no schedule, no noise.
 
 ### CLI — scan and gate a build, with no server or database
 
@@ -318,6 +336,13 @@ The interactive API reference is at `/scalar/v1`.
    query, retrieves similar changelog chunks from **pgvector**, builds a
    prompt-injection-shielded prompt, and returns a deterministic recommendation plus an
    LLM (or templated) narrative.
+8. On completion the assessed graph is captured as an append-only **`jsonb` snapshot**
+   (pruned to the newest N). Comparing the two latest snapshots is **drift** — served at
+   `…/drift`, rolled up across all packages at `/api/drift/digest`, and, on *new*
+   high-severity issues, **pushed to Slack and/or a GitHub issue**. An opt-in watchlist
+   re-scans on a schedule so this all happens unattended.
+9. The same Application core also runs **standalone in the CLI** (network ports only, no
+   DB) to gate CI, and renders a **CycloneDX SBOM** and a **health badge** on demand.
 
 ### AI security — prompt injection
 

@@ -10,23 +10,26 @@ namespace DepRadar.Application.History;
 /// </summary>
 public static class DriftIssue
 {
-    /// <summary>The issue title.</summary>
+    /// <summary>
+    /// A <em>stable</em> issue title (one per root), so successive alerts can find and
+    /// update the existing open issue instead of opening a new one each time.
+    /// </summary>
     public static string Title(DriftReport report) =>
-        string.Create(
-            CultureInfo.InvariantCulture,
-            $"DepRadar: drift in {report.Root.Value} ({DriftAlert.Actionable(report).Count} new high-severity issue(s))");
+        string.Create(CultureInfo.InvariantCulture, $"DepRadar: drift in {report.Root.Value}");
 
-    /// <summary>The issue body in GitHub-flavored Markdown.</summary>
+    /// <summary>The issue (or comment) body in GitHub-flavored Markdown.</summary>
     public static string Body(DriftReport report)
     {
+        var actionable = DriftAlert.Actionable(report);
         var delta = report.NetHealthDelta.ToString("+0;-0;0", CultureInfo.InvariantCulture);
+        var asOf = report.To.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture);
 
         var builder = new StringBuilder();
-        builder.Append("DepRadar detected drift in `").Append(report.Root.Value)
-            .Append("` since the previous scan (net health ").Append(delta).AppendLine(").").AppendLine();
-        builder.AppendLine("**New high-severity issues:**").AppendLine();
+        builder.Append("**").Append(actionable.Count.ToString(CultureInfo.InvariantCulture))
+            .Append(" new high-severity issue(s)** in `").Append(report.Root.Value)
+            .Append("` (net health ").Append(delta).Append("), as of ").Append(asOf).AppendLine(":").AppendLine();
 
-        foreach (var change in DriftAlert.Actionable(report))
+        foreach (var change in actionable)
         {
             builder.Append("- **").Append(change.Package).Append("** — ").AppendLine(change.Detail);
         }

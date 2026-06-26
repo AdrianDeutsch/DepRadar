@@ -144,6 +144,13 @@ public static class DependencyInjection
         {
             services.AddHttpClient<SlackDriftNotifier>(client => client.BaseAddress = new Uri(slackWebhookUrl!))
                 .AddStandardResilienceHandler();
+            services.AddHttpClient<SlackDigestNotifier>(client => client.BaseAddress = new Uri(slackWebhookUrl!))
+                .AddStandardResilienceHandler();
+            services.AddScoped<IDigestNotifier>(provider => provider.GetRequiredService<SlackDigestNotifier>());
+        }
+        else
+        {
+            services.AddScoped<IDigestNotifier, NullDigestNotifier>();
         }
 
         if (hasGitHub)

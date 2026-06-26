@@ -36,5 +36,8 @@ builder.Services.AddHostedService<StaleScanReaper>();
 // Autonomous monitoring: periodically re-scan tracked packages (opt-in via Watch:IntervalHours).
 builder.Services.AddHostedService<WatchlistRescanService>();
 
+// Scheduled drift digest delivery (opt-in via Digest:IntervalHours).
+builder.Services.AddHostedService<DigestScheduleService>();
+
 var host = builder.Build();
 await host.RunAsync();
