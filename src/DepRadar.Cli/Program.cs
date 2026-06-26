@@ -11,9 +11,7 @@ Console.CancelKeyPress += (_, e) =>
 
 if (args.Length == 0 || args[0] is "-h" or "--help" or "help")
 {
-    Console.WriteLine(CliOptions.Usage);
-    Console.WriteLine();
-    Console.WriteLine(DiffCommand.Usage);
+    PrintUsage(Console.Out);
     return args.Length == 0 ? ExitCodes.Usage : ExitCodes.Ok;
 }
 
@@ -21,14 +19,21 @@ return args[0] switch
 {
     "scan" => await ScanCommand.RunAsync(args[1..], cts.Token),
     "diff" => await DiffCommand.RunAsync(args[1..], cts.Token),
+    "fix" => await FixCommand.RunAsync(args[1..], cts.Token),
     var unknown => Fail(unknown),
 };
 
 static int Fail(string verb)
 {
     Console.Error.WriteLine($"Unknown command '{verb}'.");
-    Console.Error.WriteLine(CliOptions.Usage);
-    Console.Error.WriteLine();
-    Console.Error.WriteLine(DiffCommand.Usage);
+    PrintUsage(Console.Error);
     return ExitCodes.Usage;
+}
+
+static void PrintUsage(System.IO.TextWriter writer)
+{
+    writer.WriteLine(CliOptions.Usage);
+    writer.WriteLine();
+    writer.WriteLine(DiffCommand.Usage);
+    writer.WriteLine(FixCommand.Usage);
 }

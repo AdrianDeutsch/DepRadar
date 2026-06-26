@@ -10,6 +10,34 @@ namespace DepRadar.Application.Projects;
 /// </summary>
 public static class ProjectFileParser
 {
+    /// <summary>
+    /// Returns the versioned package references (<c>PackageReference</c> /
+    /// <c>PackageVersion</c> with both <c>Include</c> and <c>Version</c>) from a
+    /// <c>.csproj</c> or <c>Directory.Packages.props</c> — what the auto-fix command bumps.
+    /// </summary>
+    /// <exception cref="FormatException">The content is not valid project XML.</exception>
+    public static IReadOnlyList<ManifestReference> ParseReferences(string content)
+    {
+        XDocument document;
+        try
+        {
+            document = XDocument.Parse(content ?? string.Empty);
+        }
+        catch (System.Xml.XmlException exception)
+        {
+            throw new FormatException("Invalid project file XML.", exception);
+        }
+
+        return document.Descendants()
+            .Where(element => element.Name.LocalName is "PackageReference" or "PackageVersion")
+            .Select(element => new ManifestReference(
+                (string?)element.Attribute("Include") ?? string.Empty,
+                (string?)element.Attribute("Version") ?? string.Empty))
+            .Where(reference => !string.IsNullOrWhiteSpace(reference.Id) && !string.IsNullOrWhiteSpace(reference.Version))
+            .Select(reference => new ManifestReference(reference.Id.Trim(), reference.Version.Trim()))
+            .ToList();
+    }
+
     /// <summary>Returns the distinct direct package ids found in the content.</summary>
     /// <exception cref="FormatException">The content is not recognizable XML/JSON.</exception>
     public static IReadOnlyList<string> ParseDirectPackages(string content)
@@ -81,3 +109,8 @@ public static class ProjectFileParser
         }
     }
 }
+
+/// <summary>A versioned package reference declared in a project/props file.</summary>
+/// <param name="Id">The package id (as written in <c>Include</c>).</param>
+/// <param name="Version">The declared version.</param>
+public sealed record ManifestReference(string Id, string Version);

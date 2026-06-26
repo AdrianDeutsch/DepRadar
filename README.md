@@ -60,8 +60,9 @@ has: **"Is this upgrade worth it — and how risky is it?"**
 - 🕸️ **Transitive graph** — direct *and* transitive dependencies with resolved versions.
 - 🧭 **Vulnerability paths** — for every vulnerable package, the exact dependency chain
   that pulled it in (`root → A → B`), so you know *why* it's there and where to cut it.
-- 🛠️ **Remediation** — the **minimal safe upgrade** per vulnerable package: the smallest
-  version that clears every advisory (read from OSV's patched ranges), shown as a fix hint.
+- 🛠️ **Remediation & auto-fix** — the **minimal safe upgrade** per vulnerable package
+  (smallest version clearing every advisory), shown as a fix hint and applied by
+  `depradar fix` — patch in place or **open a pull request** with the bump.
 - 🧮 **Health scoring** — an explainable score per package and per project.
 - 🤖 **LLM upgrade advisor** — RAG over changelogs + risk data, plus a graph chatbot.
 - 📦 **Whole-project scan** — paste a `.csproj` or `packages.lock.json` to scan every
@@ -106,7 +107,7 @@ flowchart TB
     subgraph P["Presentation — three hosts on one core"]
         API["Web API · Minimal API + SignalR + Scalar<br/>(scan · graph · risk · upgrade · report · SBOM · chat · diff · drift · badge)"]
         WK["Worker · Channels pipeline<br/>(ingest · stale-scan reaper · watchlist · scheduled digest)"]
-        CLI["CLI · dotnet tool<br/>(scan + policy gate · diff — stateless, DB-free)"]
+        CLI["CLI · dotnet tool<br/>(scan + policy gate · diff · fix/PR — stateless, DB-free)"]
     end
     subgraph A["Application"]
         UC["Use cases · hand-rolled Mediator"]
@@ -301,7 +302,18 @@ depradar scan ./MyApp.csproj --forbid copyleft --sbom sbom.json --sarif results.
 
 # Compare two versions
 depradar diff Newtonsoft.Json 12.0.3 13.0.3
+
+# Auto-fix: bump vulnerable direct deps to their minimal safe version
+depradar fix ./MyApp.csproj --dry-run            # preview the bumps
+depradar fix ./MyApp.csproj                       # patch the file in place
+depradar fix ./MyApp.csproj --open-pr --repo owner/name   # open a PR (needs GITHUB_TOKEN)
 ```
+
+> **Auto-fix** finds each *vulnerable direct* dependency, reads its patched version from
+> OSV and rewrites the `Version=` in your `.csproj` / `Directory.Packages.props` (a
+> targeted text edit, so formatting and comments survive). With `--open-pr` it commits the
+> change on a fresh branch and opens a pull request via the GitHub REST API — config-gated
+> by `GITHUB_TOKEN`, exactly like the issue/alert channels.
 
 Exit codes: `0` policy passed · `1` policy violated · `2` usage error.
 
@@ -445,8 +457,9 @@ dotnet test           # unit + architecture + integration (needs Docker)
       and a `depradar.drift.open` **OpenTelemetry gauge**.
 - [x] **Explainable & exportable findings:** **vulnerability paths** (why a transitive
       package is here) and **SARIF 2.1.0** export uploaded to GitHub code scanning ([ADR 0013]).
-- [x] **Remediation:** the **minimal safe upgrade** per vulnerable package — the smallest
-      version that clears every advisory, read from OSV's patched ranges ([ADR 0014]).
+- [x] **Remediation & auto-fix:** the **minimal safe upgrade** per vulnerable package, and
+      `depradar fix` to apply it — patch the manifest in place or **open a pull request**
+      via the GitHub REST API ([ADR 0014]).
 
 ## License & credits
 

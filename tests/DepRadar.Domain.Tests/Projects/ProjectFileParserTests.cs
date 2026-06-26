@@ -25,6 +25,25 @@ public sealed class ProjectFileParserTests
     }
 
     [Fact]
+    public void Parses_versioned_references_for_the_fix_command()
+    {
+        const string csproj = """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <ItemGroup>
+                <PackageReference Include="Serilog" Version="4.0.0" />
+                <PackageReference Include="Newtonsoft.Json" />
+              </ItemGroup>
+            </Project>
+            """;
+
+        var references = ProjectFileParser.ParseReferences(csproj);
+
+        references.ShouldHaveSingleItem(); // only Serilog declares a version
+        references[0].Id.ShouldBe("Serilog");
+        references[0].Version.ShouldBe("4.0.0");
+    }
+
+    [Fact]
     public void Parses_only_direct_dependencies_from_a_packages_lock()
     {
         const string lockJson = """

@@ -39,3 +39,17 @@ robust, and avoids per-candidate version probing entirely.
   and inline in the dashboard drill-down ("fix available: upgrade to …").
 - The case-sensitivity lesson is captured here so the OSV-by-name pitfall isn't reintroduced.
 - Opening the fix as a pull request is the natural next layer on top of this computation.
+
+## Follow-up since shipped: `depradar fix` (apply the fix)
+
+- A pure `ManifestPatcher` rewrites the `Version=` of the named
+  `PackageReference`/`PackageVersion` entries with a **targeted text edit** (not an XML
+  re-serialize), so formatting, comments and ordering survive — important for a clean PR.
+- The CLI `fix` command parses the manifest's versioned references, finds the vulnerable
+  *direct* dependencies (OSV at the declared version) and their safe versions, applies the
+  bumps, then either writes the file in place or — with `--open-pr` — opens a PR.
+- An `IPullRequestOpener` port (Null by default, `GitHubPullRequestOpener` when a token is
+  set) raises the PR via the GitHub REST API: read the base ref, create a branch, commit
+  the patched file, open the PR. Same keyless-by-default seam as the alert channels.
+- Transitive vulnerabilities are reported (paths/remediation) but not auto-bumped — you can
+  only rewrite what the manifest declares; fixing those means upgrading the direct parent.

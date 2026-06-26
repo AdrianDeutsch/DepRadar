@@ -109,7 +109,29 @@ public static class DependencyInjection
             })
             .AddStandardResilienceHandler();
 
+        AddPullRequestOpener(services, gitHubToken);
+
         return services;
+    }
+
+    /// <summary>Wires the GitHub PR opener when a token is configured, else a no-op.</summary>
+    private static void AddPullRequestOpener(IServiceCollection services, string? gitHubToken)
+    {
+        if (string.IsNullOrWhiteSpace(gitHubToken))
+        {
+            services.AddScoped<IPullRequestOpener, NullPullRequestOpener>();
+            return;
+        }
+
+        services.AddHttpClient<IPullRequestOpener, GitHubPullRequestOpener>(client =>
+            {
+                client.BaseAddress = new Uri("https://api.github.com/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+                client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+                client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
+                client.DefaultRequestHeaders.Authorization = new("Bearer", gitHubToken);
+            })
+            .AddStandardResilienceHandler();
     }
 
     /// <summary>
