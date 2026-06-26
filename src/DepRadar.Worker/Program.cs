@@ -33,6 +33,9 @@ builder.Services.AddHostedService<ScanConsumerService>();
 // Resilience: requeue scans abandoned by a crashed worker.
 builder.Services.AddHostedService<StaleScanReaper>();
 
+// Retention: prune drift history to the most recent N snapshots per root, on a schedule.
+builder.Services.AddHostedService<SnapshotRetentionService>();
+
 // Autonomous monitoring: periodically re-scan tracked packages (opt-in via Watch:IntervalHours).
 builder.Services.AddHostedService<WatchlistRescanService>();
 

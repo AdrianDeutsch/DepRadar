@@ -251,8 +251,9 @@ Set two config values and DepRadar watches your dependencies for you:
 
 ```jsonc
 // appsettings / environment / Aspire parameters
-"Watch":  { "IntervalHours": 24 },                // re-scan every tracked package daily
-"Digest": { "IntervalHours": 24 },                // deliver the drift digest to Slack daily
+"Watch":     { "IntervalHours": 24 },             // re-scan every tracked package daily
+"Digest":    { "IntervalHours": 24 },             // deliver the drift digest to Slack daily
+"Retention": { "IntervalHours": 6, "MaxSnapshotsPerRoot": 50 },  // bound drift history (defaults shown)
 "Alerts": {
   "SlackWebhookUrl": "https://hooks.slack.com/services/…",  // optional channel
   "GitHubRepo": "owner/name"                                // optional channel (uses GitHub:Token)
@@ -262,10 +263,11 @@ Set two config values and DepRadar watches your dependencies for you:
 The worker re-scans every previously-scanned package on the interval; when a re-scan
 introduces a **new high-severity** issue (CVE, deprecation, archival) it fans the alert out
 to **every configured channel** — Slack, a GitHub issue, or both. GitHub alerts
-**de-duplicate**: one stable issue per package, so a repeat alert comments on the existing
-open issue rather than opening a new one. A separate schedule delivers the **drift digest**
-to Slack (only when something actually changed). Everything is off by default: no webhook,
-no repo, no schedule, no noise.
+**de-duplicate and auto-resolve**: one stable issue per package — a repeat alert comments
+on the open issue, and when a later scan clears the drift the issue is **commented and
+closed automatically**. A separate schedule delivers the **drift digest** to Slack (only
+when something changed), and a background **retention** job keeps the history bounded.
+`Watch`/`Digest` are off by default; `Retention` runs on its own.
 
 ### CLI — scan and gate a build, with no server or database
 

@@ -33,6 +33,13 @@ public sealed class DriftIssueTests
     }
 
     [Fact]
+    public void Resolved_comment_signals_an_automatic_closure()
+    {
+        DriftIssue.ResolvedComment().ShouldContain("Drift resolved");
+        DriftIssue.ResolvedComment().ShouldContain("automatically");
+    }
+
+    [Fact]
     public void Title_is_identical_for_the_same_root_regardless_of_the_events()
     {
         var first = new DriftReport(PackageId.Create("acme.lib"), DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch, -10,

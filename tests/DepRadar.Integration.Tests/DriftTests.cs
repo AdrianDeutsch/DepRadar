@@ -88,6 +88,28 @@ public sealed class DriftTests(PostgresFixture fixture) : IClassFixture<Postgres
     }
 
     [Fact]
+    public async Task A_rescan_with_no_new_risk_resolves_the_alert()
+    {
+        var notifier = new CapturingDriftNotifier();
+        await using var provider = BuildProvider(fixture.ConnectionString, notifier);
+        await MigrateAsync(provider);
+
+        // Baseline ALREADY carries the stub's risky state, so the re-scan introduces no
+        // *new* high-severity drift — the alert should be resolved, not re-fired.
+        var baselineAt = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero);
+        await AddSnapshotAsync(provider, "ResolveRoot", baselineAt, 35, RiskLevel.Critical,
+            new PackageRiskState("resolveroot", "1.0.0", 85, RiskLevel.Medium, false, false, false, [], "MIT"),
+            new PackageRiskState("b", "2.0.0", 50, RiskLevel.Critical, false, false, false, ["GHSA-test-0001"], "GPL-3.0-only"),
+            new PackageRiskState("c", "3.0.0", 70, RiskLevel.High, true, false, false, [], "Apache-2.0"));
+
+        var queued = await SendAsync(provider, new RequestScanCommand("ResolveRoot"));
+        await SendAsync(provider, new RunScanCommand(queued.Id));
+
+        notifier.Reports.ShouldBeEmpty();             // nothing new to alert on
+        notifier.Resolved.ShouldContain("resolveroot"); // a prior alert would be closed
+    }
+
+    [Fact]
     public async Task Retention_keeps_only_the_newest_snapshots_per_root()
     {
         await using var provider = BuildProvider(fixture.ConnectionString);

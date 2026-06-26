@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using DepRadar.Domain.History;
+using DepRadar.Domain.ValueObjects;
 
 namespace DepRadar.Application.History;
 
@@ -12,10 +13,17 @@ public static class DriftIssue
 {
     /// <summary>
     /// A <em>stable</em> issue title (one per root), so successive alerts can find and
-    /// update the existing open issue instead of opening a new one each time.
+    /// update — or close — the existing open issue instead of opening a new one each time.
     /// </summary>
-    public static string Title(DriftReport report) =>
-        string.Create(CultureInfo.InvariantCulture, $"DepRadar: drift in {report.Root.Value}");
+    public static string Title(PackageId root) =>
+        string.Create(CultureInfo.InvariantCulture, $"DepRadar: drift in {root.Value}");
+
+    /// <inheritdoc cref="Title(PackageId)"/>
+    public static string Title(DriftReport report) => Title(report.Root);
+
+    /// <summary>The comment posted when the issue is auto-closed because drift subsided.</summary>
+    public static string ResolvedComment() =>
+        ":white_check_mark: **Drift resolved** — the latest scan found no high-severity issues.\n\n_Closed automatically by DepRadar._";
 
     /// <summary>The issue (or comment) body in GitHub-flavored Markdown.</summary>
     public static string Body(DriftReport report)

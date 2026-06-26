@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using DepRadar.Application.History;
 using DepRadar.Domain.History;
+using DepRadar.Domain.ValueObjects;
 
 namespace DepRadar.Infrastructure.Notifications;
 
@@ -18,4 +19,8 @@ internal sealed class SlackDriftNotifier(HttpClient httpClient) : IDriftNotifier
         using var response = await httpClient.PostAsJsonAsync(string.Empty, payload, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
+
+    /// <inheritdoc />
+    // Slack alerts are point-in-time messages; there is nothing to "close", so resolution is a no-op.
+    public Task ResolveAsync(PackageId root, CancellationToken cancellationToken) => Task.CompletedTask;
 }

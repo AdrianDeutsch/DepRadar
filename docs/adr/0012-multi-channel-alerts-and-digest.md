@@ -51,5 +51,9 @@ Domain (the risk + drift model) stays untouched.
   `SlackDigestNotifier` when a webhook is set) plus a worker `DigestScheduleService`
   (opt-in `Digest:IntervalHours`) post the cross-package digest on a schedule — but only
   when something actually drifted, so a clean period stays silent.
+- **Auto-resolve.** `IDriftNotifier` gained `ResolveAsync(root)`: when a re-scan shows no
+  actionable drift, the GitHub channel comments on and **closes** the open issue (Slack is
+  point-in-time, so it no-ops; the composite fans out). Drift now has a full lifecycle —
+  open on regression, comment on recurrence, close on recovery — all driven by re-scans.
 
 [ADR 0011]: 0011-autonomous-monitoring-and-badge.md

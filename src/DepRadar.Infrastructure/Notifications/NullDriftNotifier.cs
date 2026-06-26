@@ -1,5 +1,6 @@
 using DepRadar.Application.History;
 using DepRadar.Domain.History;
+using DepRadar.Domain.ValueObjects;
 
 namespace DepRadar.Infrastructure.Notifications;
 
@@ -11,4 +12,7 @@ internal sealed class NullDriftNotifier : IDriftNotifier
 {
     /// <inheritdoc />
     public Task NotifyAsync(DriftReport report, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <inheritdoc />
+    public Task ResolveAsync(PackageId root, CancellationToken cancellationToken) => Task.CompletedTask;
 }

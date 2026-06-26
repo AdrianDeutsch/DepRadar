@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using DepRadar.Application.History;
 using DepRadar.Domain.History;
+using DepRadar.Domain.ValueObjects;
 
 namespace DepRadar.Infrastructure.Notifications;
 
@@ -31,6 +32,24 @@ internal sealed class GitHubIssueDriftNotifier(HttpClient httpClient, GitHubAler
         using var created = await httpClient.PostAsJsonAsync(
             $"repos/{options.Repository}/issues", new { title, body }, cancellationToken);
         created.EnsureSuccessStatusCode();
+    }
+
+    /// <inheritdoc />
+    public async Task ResolveAsync(PackageId root, CancellationToken cancellationToken)
+    {
+        var number = await FindOpenIssueAsync(DriftIssue.Title(root), cancellationToken);
+        if (number is not { } issueNumber)
+        {
+            return; // nothing open for this package — nothing to close
+        }
+
+        using var comment = await httpClient.PostAsJsonAsync(
+            $"repos/{options.Repository}/issues/{issueNumber}/comments", new { body = DriftIssue.ResolvedComment() }, cancellationToken);
+        comment.EnsureSuccessStatusCode();
+
+        using var close = await httpClient.PatchAsJsonAsync(
+            $"repos/{options.Repository}/issues/{issueNumber}", new { state = "closed", state_reason = "completed" }, cancellationToken);
+        close.EnsureSuccessStatusCode();
     }
 
     /// <summary>The number of an open issue with the exact title, or <see langword="null"/>.</summary>

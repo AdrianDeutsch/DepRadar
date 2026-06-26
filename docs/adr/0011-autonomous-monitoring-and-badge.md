@@ -42,4 +42,12 @@ addition that reuses the same assessment.
 - Pure pieces (`DriftAlert`, `DriftAlertMessage`, `BadgeRenderer`) are unit-tested; an
   integration test seeds a healthy baseline, runs a scan, and asserts the alert fires.
 
+## Follow-ups since shipped
+
+- **Retention moved off the scan path.** Pruning was originally inline in
+  `RunScanHandler` after each snapshot. It now lives in a worker `SnapshotRetentionService`
+  (`Retention:IntervalHours` / `Retention:MaxSnapshotsPerRoot`, sensible defaults) that
+  prunes every root on a schedule — so a scan never pays for cleanup, and retention is one
+  tunable place rather than a constant in the hot path.
+
 [ADR 0010]: 0010-scan-history-and-drift.md

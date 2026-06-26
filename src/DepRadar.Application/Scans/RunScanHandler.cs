@@ -34,9 +34,6 @@ public sealed class RunScanHandler(
     ILogger<RunScanHandler> logger)
     : IRequestHandler<RunScanCommand, ScanDto>
 {
-    // Drift needs only the last two snapshots; keep a short trail for the history view.
-    private const int MaxSnapshotsPerRoot = 50;
-
     /// <inheritdoc />
     public async Task<ScanDto> Handle(RunScanCommand request, CancellationToken cancellationToken)
     {
@@ -122,9 +119,8 @@ public sealed class RunScanHandler(
             await snapshots.AddAsync(SnapshotFactory.From(assessment, timeProvider.GetUtcNow()), cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // Retention: keep history bounded to the most recent N snapshots per root.
-            await snapshots.PruneAsync(root, MaxSnapshotsPerRoot, cancellationToken);
-
+            // Note: history is bounded by the worker's SnapshotRetentionService, not here,
+            // so the scan path stays lean.
             await AlertOnDriftAsync(root, cancellationToken);
         }
         catch (Exception exception)
@@ -147,6 +143,11 @@ public sealed class RunScanHandler(
         if (DriftAlert.Actionable(drift).Count > 0)
         {
             await driftNotifier.NotifyAsync(drift, cancellationToken);
+        }
+        else
+        {
+            // Drift has cleared: let channels close any alert they opened for this package.
+            await driftNotifier.ResolveAsync(root, cancellationToken);
         }
     }
 
