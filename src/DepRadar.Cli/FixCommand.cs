@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using DepRadar.Application.Abstractions;
+using DepRadar.Application.Analysis;
 using DepRadar.Application.Projects;
 using DepRadar.Application.Remediation;
 using DepRadar.Domain.ValueObjects;
@@ -48,9 +49,10 @@ internal static class FixCommand
 
         await using var provider = CliHost.BuildProvider();
         await using var scope = provider.CreateAsyncScope();
-        var vulnerabilities = scope.ServiceProvider.GetRequiredService<IVulnerabilitySource>();
+        var analyzer = scope.ServiceProvider.GetRequiredService<ProjectAnalyzer>();
+        var finder = scope.ServiceProvider.GetRequiredService<SafeUpgradeFinder>();
 
-        var bumps = await ResolveBumpsAsync(references, vulnerabilities, cancellationToken);
+        var bumps = await ResolveBumpsAsync(references, analyzer, finder, cancellationToken);
         if (bumps.Count == 0)
         {
             Console.WriteLine("No vulnerable direct dependencies with a known fix. Nothing to do.");
@@ -87,7 +89,8 @@ internal static class FixCommand
 
     private static async Task<Dictionary<string, string>> ResolveBumpsAsync(
         IReadOnlyList<ManifestReference> references,
-        IVulnerabilitySource vulnerabilities,
+        ProjectAnalyzer analyzer,
+        SafeUpgradeFinder finder,
         CancellationToken cancellationToken)
     {
         var bumps = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -99,21 +102,23 @@ internal static class FixCommand
             }
 
             var package = PackageId.Create(reference.Id);
-            var advisories = await vulnerabilities.GetAsync(package, version, cancellationToken);
-            if (advisories.Count == 0)
+
+            // A direct dependency needs fixing if anything in *its* graph is vulnerable —
+            // the package itself or a transitive. Bumping the direct one to a clean-graph
+            // version is the parent-bump fix for transitive advisories.
+            var graph = await analyzer.AnalyzeAsync(package, version, cancellationToken);
+            if (graph is null || graph.Nodes.All(node => node.Input.Vulnerabilities.Count == 0))
             {
                 continue;
             }
 
-            var fixedVersions = new List<string?>();
-            foreach (var advisory in advisories)
-            {
-                fixedVersions.Add(await vulnerabilities.GetFixedVersionAsync(advisory.AdvisoryId, package, version, cancellationToken));
-            }
-
-            if (RemediationCalculator.SafeVersion(fixedVersions) is { } safe)
+            if (await finder.FindMinimalCleanVersionAsync(package, version, cancellationToken) is { } safe)
             {
                 bumps[reference.Id] = safe;
+            }
+            else
+            {
+                await Console.Error.WriteLineAsync($"  {reference.Id}: vulnerable, but no newer version resolves a clean graph (consider replacing it).");
             }
         }
 

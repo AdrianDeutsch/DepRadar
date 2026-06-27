@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<ISender, Mediator>();
         services.AddScoped<Risk.GraphAssessmentLoader>();
         services.AddScoped<Analysis.ProjectAnalyzer>();
+        services.AddScoped<Remediation.SafeUpgradeFinder>();
         services.TryAddSingleton(TimeProvider.System);
 
         RegisterHandlers(services);

@@ -51,5 +51,11 @@ robust, and avoids per-candidate version probing entirely.
 - An `IPullRequestOpener` port (Null by default, `GitHubPullRequestOpener` when a token is
   set) raises the PR via the GitHub REST API: read the base ref, create a branch, commit
   the patched file, open the PR. Same keyless-by-default seam as the alert channels.
-- Transitive vulnerabilities are reported (paths/remediation) but not auto-bumped — you can
-  only rewrite what the manifest declares; fixing those means upgrading the direct parent.
+- **Transitive fixes via parent-bump.** `fix` now scores the *whole graph* of each direct
+  dependency (via `SafeUpgradeFinder` + `ProjectAnalyzer`) and bumps it to the smallest
+  version whose transitive closure is advisory-free. Because newer parents pull newer
+  transitives, this clears transitive CVEs too — and when no parent version resolves a
+  clean graph (e.g. a deprecated package), it says so rather than pretending. Bounded to
+  `SafeUpgradeFinder.MaxCandidates` resolutions per dependency, cached.
+- **Scheduled auto-fix.** A `dependency-autofix` workflow (cron + dispatch) runs
+  `depradar fix --open-pr` so fix PRs appear on a cadence, the same way Dependabot does.

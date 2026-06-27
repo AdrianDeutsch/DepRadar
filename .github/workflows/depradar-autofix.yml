@@ -1,0 +1,42 @@
+name: dependency-autofix
+
+# Scheduled remediation: on a cadence, DepRadar bumps any vulnerable direct dependency
+# to its minimal safe version and opens a pull request. Opt-in/manual via the schedule
+# and workflow_dispatch; it dogfoods DepRadar's own Directory.Packages.props.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      manifest:
+        description: "Project / props file to fix"
+        required: false
+        default: "Directory.Packages.props"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Pack & install the depradar tool
+        run: |
+          dotnet pack src/DepRadar.Cli/DepRadar.Cli.csproj -c Release -o ./artifacts/nupkg
+          dotnet tool install --global DepRadar.Tool --version 0.1.0 --add-source ./artifacts/nupkg
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Open an auto-fix pull request
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: depradar fix "${{ github.event.inputs.manifest || 'Directory.Packages.props' }}" --open-pr --base "${{ github.ref_name }}"

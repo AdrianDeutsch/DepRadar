@@ -277,11 +277,15 @@ depradar fix ./MyApp.csproj                       # patch the file in place
 depradar fix ./MyApp.csproj --open-pr --repo owner/name   # open a PR (needs GITHUB_TOKEN)
 ```
 
-> **Auto-fix** finds each *vulnerable direct* dependency, reads its patched version from
-> OSV and rewrites the `Version=` in your `.csproj` / `Directory.Packages.props` (a
-> targeted text edit, so formatting and comments survive). With `--open-pr` it commits the
-> change on a fresh branch and opens a pull request via the GitHub REST API — config-gated
-> by `GITHUB_TOKEN`, exactly like the issue/alert channels.
+> **Auto-fix** bumps each direct dependency to the **smallest version whose whole
+> transitive graph is clean** — so it clears *transitive* advisories too (the parent-bump
+> fix), not just the direct package's own. It rewrites the `Version=` in your `.csproj` /
+> `Directory.Packages.props` (a targeted text edit, so formatting and comments survive),
+> and honestly reports a dependency it can't fix (e.g. a deprecated package with no clean
+> newer version). With `--open-pr` it commits on a fresh branch and opens a PR via the
+> GitHub REST API — config-gated by `GITHUB_TOKEN`, exactly like the issue/alert channels.
+> A scheduled [`dependency-autofix`](.github/workflows/depradar-autofix.yml) workflow runs
+> it on a cadence.
 
 Exit codes: `0` policy passed · `1` policy violated · `2` usage error.
 
