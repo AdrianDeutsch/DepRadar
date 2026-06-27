@@ -2,7 +2,8 @@
 
 | Asset           | What it shows                                                        |
 | --------------- | -------------------------------------------------------------------- |
-| `banner.svg`    | Repository header banner.                                            |
+| `banner.svg`       | Repository header banner.                                         |
+| `architecture.svg` | The Clean Architecture layer diagram (Presentation → Application → Domain; Infrastructure implements the ports). |
 | `demo.gif`      | Dashboard tour: landing → healthy graph → risky findings → upgrade diff → drift. |
 | `landing.png`   | The landing view (intro + clickable example packages).              |
 | `dashboard.png` | A healthy 24-package transitive graph + sortable risk ranking.       |

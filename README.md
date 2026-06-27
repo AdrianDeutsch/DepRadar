@@ -39,8 +39,10 @@
 > with an upgrade verdict + SBOM export (top-right). Bottom-left, the **upgrade-impact
 > diff** shows Newtonsoft 12.0.3 → 13.0.3 clearing a CVE for **+30 health**; bottom-right,
 > the full dashboard with the **drift** panel — what rotted since the previous scan (net
-> health −65) — above the "ask the graph" chat. Deep-link any scanned package via
-> `/?package=<id>` (and `&ask=` / `&diff=`).
+> health −65) — above the "ask the graph" chat. Top-right, the risk drill-down traces a
+> vulnerable transitive package's **path** *and* its **fix** ("pulled in via … → newtonsoft.json;
+> fix available: upgrade to 13.0.1"). Deep-link any scanned package via `/?package=<id>`
+> (and `&ask=` / `&diff=` / `&drill=`).
 
 ## Problem & solution
 
@@ -102,45 +104,11 @@ Clean Architecture with a strictly **inward** dependency direction, enforced in 
 [NetArchTest](tests/DepRadar.Architecture.Tests). Decisions are recorded as ADRs in
 [`docs/adr`](docs/adr).
 
-```mermaid
-flowchart TB
-    subgraph P["Presentation — three hosts on one core"]
-        API["Web API · Minimal API + SignalR + Scalar<br/>(scan · graph · risk · upgrade · report · SBOM · chat · diff · drift · badge)"]
-        WK["Worker · Channels pipeline<br/>(ingest · stale-scan reaper · watchlist · scheduled digest)"]
-        CLI["CLI · dotnet tool<br/>(scan + policy gate · diff · fix/PR — stateless, DB-free)"]
-    end
-    subgraph A["Application"]
-        UC["Use cases · hand-rolled Mediator"]
-        SVC["Pure services · ProjectAnalyzer · GraphDiffer<br/>· DriftAnalyzer · PolicyEvaluator · CycloneDX · BadgeRenderer"]
-        PORTS["Ports (interfaces)"]
-    end
-    subgraph I["Infrastructure (implements ports)"]
-        EF["EF Core 10 · PostgreSQL + pgvector<br/>repos · scan snapshots · migrations"]
-        EXT["Resilient HttpClients<br/>NuGet · OSV · deps.dev · GitHub"]
-        SUP["HybridCache + Redis · ILanguageModel<br/>· drift notifiers (Slack · GitHub · composite)"]
-    end
-    subgraph D["Domain (dependency-free)"]
-        MODEL["Entities · Value Objects<br/>PackageRiskScorer · DriftAnalyzer · DriftAlert"]
-    end
-
-    API --> UC
-    WK --> UC
-    CLI --> UC
-    UC --> SVC
-    UC --> PORTS
-    SVC --> MODEL
-    EF -. implements .-> PORTS
-    EXT -. implements .-> PORTS
-    SUP -. implements .-> PORTS
-    EF --> MODEL
-
-    classDef domain fill:#16241b,stroke:#34d399,color:#e6edf3;
-    class MODEL domain;
-```
+<p align="center"><img src="docs/assets/architecture.svg" alt="DepRadar Clean Architecture — Presentation (API/Worker/CLI), Application (use cases, pure services, ports), Domain, and Infrastructure implementing the ports" width="100%" /></p>
 
 The **CLI host** resolves only the network-backed ports (NuGet/OSV/GitHub) — never EF —
-so it runs the whole analysis with no database. Every feature above is a thin composition
-over the same Domain model; the arrows only ever point inward.
+so it runs the whole analysis with no database. Every feature is a thin composition over
+the same Domain model; the arrows only ever point inward.
 
 Async, durable scan pipeline (Slice 2):
 

@@ -453,7 +453,14 @@ function escapeHtml(value) {
   els.input.value = pkg;
   setStatus("Completed", "loading stored report…");
   loadResults(pkg).then(() => {
-    if (riskRows.length) {
+    // Open a specific package's drill-down (?drill=<id>) or the worst finding by default.
+    const drill = params.get("drill");
+    const target = drill
+      ? riskRows.find((p) => p.packageId.toLowerCase() === drill.toLowerCase())
+      : null;
+    if (target) {
+      showDrill(target);
+    } else if (riskRows.length) {
       showDrill(riskRows.reduce((worst, p) => (p.score <= worst.score ? p : worst)));
     }
     const ask = params.get("ask");
