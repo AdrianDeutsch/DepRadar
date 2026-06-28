@@ -6,7 +6,7 @@ name: publish
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["v*.*.*"] # full semver tags only (the moving v1 major tag must not publish)
   workflow_dispatch:
 
 permissions:

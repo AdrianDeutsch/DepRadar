@@ -169,7 +169,7 @@ The CLI ships as a composite [GitHub Action](action.yml). DepRadar **dogfoods it
 push, uploads a CycloneDX SBOM artifact, and **publishes a SARIF report to the Security tab**.
 
 ```yaml
-- uses: AdrianDeutsch/DepRadar@v0.1.1
+- uses: AdrianDeutsch/DepRadar@v1
   with:
     target: src/MyApp/MyApp.csproj   # a package id, .csproj, or packages.lock.json
     fail-on: high                    # none | low | medium | high | critical
