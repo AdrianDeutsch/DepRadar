@@ -138,6 +138,40 @@ sequenceDiagram
     API-->>User: nodes + edges
 ```
 
+Autonomous drift monitoring (open on regression, close on recovery):
+
+```mermaid
+sequenceDiagram
+    participant W as Worker · watchlist
+    participant DB as PostgreSQL
+    participant EXT as OSV · NuGet · GitHub
+    participant CH as Slack · GitHub issue
+
+    loop every Watch:IntervalHours
+        W->>DB: re-queue every tracked package
+    end
+    W->>EXT: resolve + score the graph
+    W->>DB: record risk snapshot (prune to newest N)
+    W->>DB: load the two latest snapshots
+    alt new high-severity drift
+        W->>CH: alert — open or comment (de-duplicated)
+    else drift cleared
+        W->>CH: resolve — close the issue
+    end
+```
+
+Auto-fix — minimal safe upgrade, including transitive advisories (parent-bump):
+
+```mermaid
+flowchart LR
+    A["vulnerable direct dep<br/>(itself or a transitive)"] --> B{"smallest newer version<br/>with a clean graph?"}
+    B -- yes --> C["rewrite Version=<br/>(targeted text edit)"]
+    B -- no --> D["report: consider replacing<br/>e.g. a deprecated package"]
+    C --> E{"--open-pr ?"}
+    E -- yes --> F["branch + commit + PR<br/>via GitHub REST"]
+    E -- no --> G["patch the file in place"]
+```
+
 ## Tech stack
 
 | Area          | Technology                                   | Purpose                                                        |
