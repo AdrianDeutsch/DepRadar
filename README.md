@@ -8,6 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/AdrianDeutsch/DepRadar/actions/workflows/ci.yml"><img src="https://github.com/AdrianDeutsch/DepRadar/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://www.nuget.org/packages/DepRadar.Tool"><img src="https://img.shields.io/nuget/v/DepRadar.Tool?label=DepRadar.Tool&color=512BD4" alt="NuGet" /></a>
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4" alt=".NET 10" />
   <img src="https://img.shields.io/badge/C%23-14-239120" alt="C# 14" />
   <img src="https://img.shields.io/badge/architecture-Clean-2dd4bf" alt="Clean Architecture" />
@@ -311,10 +312,8 @@ when something changed), and a background **retention** job keeps the history bo
 live NuGet/OSV/GitHub data, so it works standalone in CI:
 
 ```bash
-# Install: from a published Release asset (no NuGet account needed)…
-dotnet tool install --global --add-source <folder-with-the-downloaded-nupkg> DepRadar.Tool
-# …or build it from source:
-dotnet pack src/DepRadar.Cli -o ./artifacts/nupkg && dotnet tool install --global --add-source ./artifacts/nupkg DepRadar.Tool
+# Install from NuGet.org
+dotnet tool install --global DepRadar.Tool
 
 # Scan a package or a whole project; exit code 1 fails the build on a policy breach
 depradar scan WindowsAzure.Storage --fail-on high --no-deprecated
