@@ -47,6 +47,21 @@ public sealed class PolicyEvaluatorTests
     }
 
     [Fact]
+    public void Suppresses_violations_for_ignored_packages()
+    {
+        var graph = Graph(Node("bad.pkg", "1.0.0", deprecated: true, license: null)); // High
+        var policy = new RiskPolicy(RiskLevel.High, AllowDeprecated: false, FrozenSet<LicenseCategory>.Empty)
+        {
+            IgnoredPackages = new[] { "bad.pkg" }.ToFrozenSet(StringComparer.OrdinalIgnoreCase),
+        };
+
+        var outcome = PolicyEvaluator.Evaluate(graph, policy);
+
+        outcome.Passed.ShouldBeTrue(); // accepted risk — suppressed from the gate
+        outcome.Violations.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void Fails_on_forbidden_license_categories()
     {
         var graph = Graph(Node("gpl.pkg", "1.0.0", license: "GPL-3.0-only"));

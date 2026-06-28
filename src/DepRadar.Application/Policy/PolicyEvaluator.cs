@@ -17,6 +17,11 @@ public static class PolicyEvaluator
 
         foreach (var node in assessment.Nodes)
         {
+            if (policy.IgnoredPackages.Contains(node.Package.Value))
+            {
+                continue; // accepted risk — suppressed from the gate
+            }
+
             var coordinate = $"{node.Package.Value}@{node.Version}";
             var level = node.Assessment.Score.Level;
 

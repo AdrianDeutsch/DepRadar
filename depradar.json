@@ -1,0 +1,8 @@
+{
+  // DepRadar's own dependency-health gate (policy-as-code). The CLI auto-detects this
+  // file in the working directory; it takes precedence over --fail-on / --forbid flags.
+  "failOn": "critical",
+  "allowDeprecated": true,
+  "forbiddenLicenses": [],
+  "ignore": []
+}

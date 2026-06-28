@@ -17,6 +17,12 @@ public sealed record RiskPolicy(
     bool AllowDeprecated,
     IReadOnlySet<LicenseCategory> ForbiddenLicenses)
 {
+    /// <summary>
+    /// Package ids whose violations are suppressed — accepted risk (VEX-style), still
+    /// shown in the report but not failing the gate.
+    /// </summary>
+    public IReadOnlySet<string> IgnoredPackages { get; init; } = FrozenSet<string>.Empty;
+
     /// <summary>A lenient default: fail only on Critical, allow everything else.</summary>
     public static RiskPolicy Default { get; } =
         new(RiskLevel.Critical, AllowDeprecated: true, FrozenSet<LicenseCategory>.Empty);

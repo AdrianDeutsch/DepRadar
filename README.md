@@ -333,6 +333,20 @@ depradar fix ./MyApp.csproj --open-pr --repo owner/name   # open a PR (needs GIT
 
 Exit codes: `0` policy passed · `1` policy violated · `2` usage error.
 
+#### Policy-as-code
+
+Keep the gate in the repo instead of in CI flags. The CLI auto-detects `depradar.json`
+in the working directory (or pass `--policy <path>`); it takes precedence over the flags:
+
+```jsonc
+{
+  "failOn": "high",                       // none | low | medium | high | critical
+  "allowDeprecated": false,
+  "forbiddenLicenses": ["copyleft", "unknown"],
+  "ignore": ["Some.Accepted.Package"]     // accepted risk (VEX-style): shown, but not failing the gate
+}
+```
+
 ### GitHub Action — gate dependencies in CI
 
 The CLI ships as a composite [GitHub Action](action.yml). DepRadar **dogfoods it** —

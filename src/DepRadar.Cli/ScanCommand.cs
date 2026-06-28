@@ -59,7 +59,13 @@ internal static class ScanCommand
         }
 
         var graph = Merge(assessments);
-        var outcome = PolicyEvaluator.Evaluate(graph, options.ToPolicy());
+        if (!TryResolvePolicy(options, out var policy, out var policyError))
+        {
+            await Console.Error.WriteLineAsync(policyError);
+            return ExitCodes.Usage;
+        }
+
+        var outcome = PolicyEvaluator.Evaluate(graph, policy!);
 
         if (options.Json)
         {
@@ -89,6 +95,33 @@ internal static class ScanCommand
         }
 
         return outcome.Passed ? ExitCodes.Ok : ExitCodes.PolicyViolation;
+    }
+
+    /// <summary>
+    /// The gate comes from a policy file when one is given (or <c>./depradar.json</c> exists),
+    /// otherwise from the CLI flags. An explicit but invalid file is a usage error.
+    /// </summary>
+    private static bool TryResolvePolicy(CliOptions options, out RiskPolicy? policy, out string? error)
+    {
+        error = null;
+        var path = options.PolicyPath ?? (File.Exists("depradar.json") ? "depradar.json" : null);
+        if (path is null)
+        {
+            policy = options.ToPolicy();
+            return true;
+        }
+
+        try
+        {
+            policy = PolicyFile.Parse(File.ReadAllText(path));
+            return true;
+        }
+        catch (Exception exception) when (exception is FormatException or IOException)
+        {
+            policy = null;
+            error = $"Could not read policy '{path}': {exception.Message}";
+            return false;
+        }
     }
 
     /// <summary>A package id scans one root; an existing project file scans its direct dependencies.</summary>
