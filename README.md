@@ -22,6 +22,9 @@
 <p align="center">
   <img src="docs/assets/demo.gif" alt="DepRadar dashboard demo" width="100%" />
 </p>
+<p align="center">
+  <a href="https://github.com/AdrianDeutsch/DepRadar/releases/latest">▶ Watch the 15-second screencast (MP4)</a>
+</p>
 
 <table>
   <tr>
