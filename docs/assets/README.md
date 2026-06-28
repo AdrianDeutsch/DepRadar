@@ -5,6 +5,7 @@
 | `banner.svg`       | Repository header banner.                                         |
 | `architecture.svg` | The Clean Architecture layer diagram (Presentation → Application → Domain; Infrastructure implements the ports). |
 | `demo.gif`      | Dashboard tour: landing → healthy graph → risky findings → upgrade diff → drift. |
+| `demo.mp4`      | The same tour as a ~15s crossfade screencast (linked from the README / release). |
 | `landing.png`   | The landing view (intro + clickable example packages).              |
 | `dashboard.png` | A healthy 24-package transitive graph + sortable risk ranking.       |
 | `risk.png`      | A risky package flagged across security, license & maintenance, + SBOM & upgrade advice. |
