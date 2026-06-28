@@ -11,9 +11,19 @@
     <PackageId>DepRadar.Tool</PackageId>
     <Version>0.1.0</Version>
     <Authors>Adrian Deutsch</Authors>
-    <Description>Dependency-health CLI: scan a package or project and fail CI on policy violations.</Description>
+    <Description>Dependency-health CLI: scan a NuGet package or project for security, license and maintenance risk, fail CI on policy violations, and auto-fix vulnerable dependencies (incl. transitive) with a pull request.</Description>
     <PackageOutputPath>$(MSBuildThisFileDirectory)../../artifacts/nupkg</PackageOutputPath>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/AdrianDeutsch/DepRadar</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/AdrianDeutsch/DepRadar</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>security;dependencies;vulnerabilities;sbom;sarif;cli;dotnet-tool;supply-chain;nuget</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DepRadar.Application\DepRadar.Application.csproj" />

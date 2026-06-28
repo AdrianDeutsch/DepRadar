@@ -1,0 +1,53 @@
+name: publish
+
+# Publishes the depradar CLI to NuGet.org. Push a tag like `v0.2.0` to release that
+# version, or run manually to produce a dev package. The push step is a no-op until the
+# NUGET_API_KEY secret is set, so the workflow is safe to land before publishing.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Pack the depradar tool
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="0.1.0-dev.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "Packing DepRadar.Tool $VERSION"
+          dotnet pack src/DepRadar.Cli/DepRadar.Cli.csproj -c Release -o ./artifacts/nupkg -p:Version="$VERSION"
+
+      - name: Push to NuGet.org
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "NUGET_API_KEY not set — skipping push (packaged only)."
+            exit 0
+          fi
+          dotnet nuget push ./artifacts/nupkg/*.nupkg \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - name: Upload the package as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: ./artifacts/nupkg/*.nupkg

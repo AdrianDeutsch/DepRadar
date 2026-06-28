@@ -200,11 +200,21 @@ flowchart LR
 **Run the whole system with one command**
 
 ```bash
+docker compose up --build      # then open http://localhost:8080
+```
+
+Compose starts PostgreSQL + pgvector, the **Web API** (applies EF migrations on startup)
+and the **Worker** (gated on the API being healthy). The pgvector extension is created up
+front by an init script, so there is no first-run ordering issue. Tear down with
+`docker compose down -v`.
+
+Or run it Aspire-orchestrated for local development (dashboard, pgAdmin, telemetry):
+
+```bash
 dotnet run --project src/DepRadar.AppHost
 ```
 
-This launches the Aspire dashboard, PostgreSQL (+ pgAdmin), the Web API and the
-Worker. Open the dashboard, find the **api** endpoint, then:
+Either way, find the **api** endpoint (`http://localhost:8080` under Compose), then:
 
 ```bash
 # Queue a transitive scan — returns 202 with the scan id
