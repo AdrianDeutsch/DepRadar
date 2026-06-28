@@ -20,6 +20,7 @@ return args[0] switch
     "scan" => await ScanCommand.RunAsync(args[1..], cts.Token),
     "diff" => await DiffCommand.RunAsync(args[1..], cts.Token),
     "fix" => await FixCommand.RunAsync(args[1..], cts.Token),
+    "npm" => await NpmCommand.RunAsync(args[1..], cts.Token),
     var unknown => Fail(unknown),
 };
 
@@ -36,4 +37,5 @@ static void PrintUsage(System.IO.TextWriter writer)
     writer.WriteLine();
     writer.WriteLine(DiffCommand.Usage);
     writer.WriteLine(FixCommand.Usage);
+    writer.WriteLine(NpmCommand.Usage);
 }

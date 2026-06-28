@@ -66,6 +66,9 @@ has: **"Is this upgrade worth it — and how risky is it?"**
   (smallest version clearing every advisory), shown as a fix hint and applied by
   `depradar fix` — patch in place or **open a pull request** with the bump.
 - 🧮 **Health scoring** — an explainable score per package and per project.
+- 🌐 **Multi-ecosystem** — scan **npm** packages too (`depradar npm <pkg>`): the registry
+  + an npm-semver range resolver feed the *same* Domain model and scorer (the architecture,
+  proven — the Domain didn't change to add an ecosystem).
 - 🤖 **LLM upgrade advisor** — RAG over changelogs + risk data, plus a graph chatbot.
 - 📦 **Whole-project scan** — paste a `.csproj` or `packages.lock.json` to scan every
   direct dependency at once (the "scan your own solution" use case).
@@ -314,6 +317,10 @@ depradar scan ./MyApp.csproj --forbid copyleft --sbom sbom.json --sarif results.
 
 # Compare two versions
 depradar diff Newtonsoft.Json 12.0.3 13.0.3
+
+# Multi-ecosystem: scan an npm package's transitive graph (registry + OSV ecosystem=npm)
+depradar npm express
+depradar npm minimist 1.2.0 --fail-on high
 
 # Auto-fix: bump vulnerable direct deps to their minimal safe version
 depradar fix ./MyApp.csproj --dry-run            # preview the bumps

@@ -4,6 +4,7 @@ using DepRadar.Application.History;
 using DepRadar.Infrastructure.Ai;
 using DepRadar.Infrastructure.External.DepsDev;
 using DepRadar.Infrastructure.External.GitHub;
+using DepRadar.Infrastructure.External.Npm;
 using DepRadar.Infrastructure.External.NuGet;
 using DepRadar.Infrastructure.External.Osv;
 using DepRadar.Infrastructure.Notifications;
@@ -95,6 +96,22 @@ public static class DependencyInjection
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
             })
             .AddStandardResilienceHandler();
+
+        // npm ecosystem (registry + OSV with ecosystem=npm), surfaced via INpmScanner.
+        services.AddHttpClient<NpmRegistryClient>(client =>
+            {
+                client.BaseAddress = new Uri("https://registry.npmjs.org/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            })
+            .AddStandardResilienceHandler();
+        services.AddHttpClient<NpmVulnerabilitySource>(client =>
+            {
+                client.BaseAddress = new Uri(osvBaseUrl ?? DefaultOsvBaseUrl);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            })
+            .AddStandardResilienceHandler();
+        services.AddScoped<NpmDependencyGraphResolver>();
+        services.AddScoped<INpmScanner, NpmScanner>();
 
         services.AddHttpClient<IRepositoryHealthSource, GitHubRepositoryHealthSource>(client =>
             {
