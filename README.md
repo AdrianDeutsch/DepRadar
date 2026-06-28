@@ -308,8 +308,10 @@ when something changed), and a background **retention** job keeps the history bo
 live NuGet/OSV/GitHub data, so it works standalone in CI:
 
 ```bash
-dotnet pack src/DepRadar.Cli -o ./artifacts/nupkg
-dotnet tool install --global --add-source ./artifacts/nupkg DepRadar.Tool
+# Install: from a published Release asset (no NuGet account needed)…
+dotnet tool install --global --add-source <folder-with-the-downloaded-nupkg> DepRadar.Tool
+# …or build it from source:
+dotnet pack src/DepRadar.Cli -o ./artifacts/nupkg && dotnet tool install --global --add-source ./artifacts/nupkg DepRadar.Tool
 
 # Scan a package or a whole project; exit code 1 fails the build on a policy breach
 depradar scan WindowsAzure.Storage --fail-on high --no-deprecated
