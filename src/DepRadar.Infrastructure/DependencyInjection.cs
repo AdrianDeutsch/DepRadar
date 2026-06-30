@@ -7,6 +7,7 @@ using DepRadar.Infrastructure.External.GitHub;
 using DepRadar.Infrastructure.External.Npm;
 using DepRadar.Infrastructure.External.NuGet;
 using DepRadar.Infrastructure.External.Osv;
+using DepRadar.Infrastructure.External.PyPi;
 using DepRadar.Infrastructure.Notifications;
 using DepRadar.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -112,6 +113,22 @@ public static class DependencyInjection
             .AddStandardResilienceHandler();
         services.AddScoped<NpmDependencyGraphResolver>();
         services.AddScoped<INpmScanner, NpmScanner>();
+
+        // PyPI ecosystem (JSON API + OSV with ecosystem=PyPI), surfaced via IPyPiScanner.
+        services.AddHttpClient<PyPiRegistryClient>(client =>
+            {
+                client.BaseAddress = new Uri("https://pypi.org/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            })
+            .AddStandardResilienceHandler();
+        services.AddHttpClient<PyPiVulnerabilitySource>(client =>
+            {
+                client.BaseAddress = new Uri(osvBaseUrl ?? DefaultOsvBaseUrl);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            })
+            .AddStandardResilienceHandler();
+        services.AddScoped<PyPiDependencyGraphResolver>();
+        services.AddScoped<IPyPiScanner, PyPiScanner>();
 
         services.AddHttpClient<IRepositoryHealthSource, GitHubRepositoryHealthSource>(client =>
             {

@@ -21,6 +21,7 @@ return args[0] switch
     "diff" => await DiffCommand.RunAsync(args[1..], cts.Token),
     "fix" => await FixCommand.RunAsync(args[1..], cts.Token),
     "npm" => await NpmCommand.RunAsync(args[1..], cts.Token),
+    "pypi" => await PyPiCommand.RunAsync(args[1..], cts.Token),
     var unknown => Fail(unknown),
 };
 
@@ -38,4 +39,5 @@ static void PrintUsage(System.IO.TextWriter writer)
     writer.WriteLine(DiffCommand.Usage);
     writer.WriteLine(FixCommand.Usage);
     writer.WriteLine(NpmCommand.Usage);
+    writer.WriteLine(PyPiCommand.Usage);
 }

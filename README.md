@@ -35,8 +35,8 @@ Teams discover **license changes** (MediatR, AutoMapper, MassTransit and FluentA
 all went commercial in 2025), **security advisories**, **abandoned packages** and
 **breaking changes** far too late — usually at the next audit or incident.
 
-DepRadar resolves the **full transitive dependency graph** of a NuGet (or npm) package or
-project, scores every node with an explainable risk model, and answers the question every
+DepRadar resolves the **full transitive dependency graph** of a NuGet, npm or PyPI package
+or project, scores every node with an explainable risk model, and answers the question every
 tech lead actually has: **"is this upgrade worth it — and how risky is it?"** It then lets
 you **fix** the risky ones (in place or via a PR), **gate** them in CI, and **monitor** them
 over time with alerts.
@@ -69,7 +69,8 @@ database):
 dotnet tool install --global DepRadar.Tool
 
 depradar scan WindowsAzure.Storage --fail-on high      # exit 1 fails CI on a policy breach
-depradar npm express                                   # npm works too
+depradar npm express                                   # npm too
+depradar pypi requests                                 # …and PyPI (Python)
 depradar fix ./MyApp.csproj --open-pr --repo owner/name # auto-fix → opens a pull request
 ```
 
@@ -120,7 +121,7 @@ docker compose up --build      # then open http://localhost:8080
 
 - **LLM upgrade advisor** — RAG over changelogs (pgvector) + a deterministic "ask the graph" chatbot.
 - **Prompt-injection defense** — changelogs are untrusted input; `PromptShield` fences them ([ADR 0006]).
-- **Multi-ecosystem** — scan **npm** packages too (`depradar npm <pkg>`) through the *same* Domain model.
+- **Multi-ecosystem** — scan **npm** (`depradar npm <pkg>`) and **PyPI** (`depradar pypi <pkg>`) packages through the *same* Domain model.
 
 ---
 
@@ -136,9 +137,10 @@ depradar scan ./MyApp.csproj --forbid copyleft --sbom sbom.json --sarif results.
 # Compare two versions — added/removed deps + CVEs introduced or cleared
 depradar diff Newtonsoft.Json 12.0.3 13.0.3
 
-# npm (multi-ecosystem)
+# Multi-ecosystem — npm and PyPI through the same risk model
 depradar npm express
 depradar npm minimist 1.2.0 --fail-on high
+depradar pypi requests                                 # latest, or pin: depradar pypi requests 2.19.1
 
 # Auto-fix vulnerable dependencies (incl. transitive, via parent-bump)
 depradar fix ./MyApp.csproj --dry-run                     # preview the bumps
@@ -377,7 +379,7 @@ to enable the live Claude narrative ([ADR 0006]).
 
 | Kind         | Tooling                                       | What it proves                                                            |
 | ------------ | --------------------------------------------- | ------------------------------------------------------------------------ |
-| Unit         | xUnit v3 + Shouldly                           | SemVer/npm-range precedence, risk scoring, drift, prompt-injection shield. |
+| Unit         | xUnit v3 + Shouldly                           | SemVer/npm-range/PEP 440 precedence, risk scoring, drift, prompt-injection shield. |
 | Architecture | NetArchTest                                   | Layer boundaries hold; MediatR & NuGet.Versioning stay out of the core.  |
 | Integration  | Testcontainers + **real PostgreSQL/pgvector** | Idempotent graph upserts, recursive-CTE closure, risk rollup, RAG, drift. |
 
@@ -419,7 +421,7 @@ DepRadar was built in six vertical slices, then extended well beyond them.
 - [x] **Full drift lifecycle:** auto-closing issues, retention job, drift badge, OpenTelemetry gauge.
 - [x] **Explainable & exportable findings:** vulnerability paths + SARIF 2.1.0 ([ADR 0013]).
 - [x] **Remediation & auto-fix:** minimal safe upgrade + `depradar fix` / PR ([ADR 0014]).
-- [x] **Multi-ecosystem:** npm support — the same Domain, a new adapter ([ADR 0016]).
+- [x] **Multi-ecosystem:** npm ([ADR 0016]) and PyPI ([ADR 0017]) support — the same Domain, a new adapter per registry.
 
 </details>
 
@@ -430,8 +432,9 @@ DepRadar was built in six vertical slices, then extended well beyond them.
 Licensed under the [MIT License](LICENSE).
 
 Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
-[npm registry](https://registry.npmjs.org) · [deps.dev](https://deps.dev) ·
-[OSV.dev](https://osv.dev) · [GitHub Advisory Database](https://github.com/advisories) ·
+[npm registry](https://registry.npmjs.org) · [PyPI JSON API](https://pypi.org/) ·
+[deps.dev](https://deps.dev) · [OSV.dev](https://osv.dev) ·
+[GitHub Advisory Database](https://github.com/advisories) ·
 [SPDX License List](https://spdx.org/licenses/).
 
 [ADR 0002]: docs/adr/0002-handrolled-mediator.md
@@ -444,3 +447,4 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0013]: docs/adr/0013-explainable-and-exportable-findings.md
 [ADR 0014]: docs/adr/0014-remediation-minimal-safe-upgrade.md
 [ADR 0016]: docs/adr/0016-multi-ecosystem-npm.md
+[ADR 0017]: docs/adr/0017-multi-ecosystem-pypi.md
