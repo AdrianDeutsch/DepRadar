@@ -307,7 +307,7 @@ sequenceDiagram
         W->>DB: re-queue every tracked package
     end
     W->>EXT: resolve + score the graph
-    W->>DB: record snapshot; load the two latest
+    W->>DB: record snapshot, load the two latest
     alt new high-severity drift
         W->>CH: alert — open or comment (de-duplicated)
     else drift cleared
