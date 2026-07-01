@@ -23,6 +23,7 @@ return args[0] switch
     "npm" => await NpmCommand.RunAsync(args[1..], cts.Token),
     "pypi" => await PyPiCommand.RunAsync(args[1..], cts.Token),
     "cargo" => await CargoCommand.RunAsync(args[1..], cts.Token),
+    "go" => await GoCommand.RunAsync(args[1..], cts.Token),
     var unknown => Fail(unknown),
 };
 
@@ -42,4 +43,5 @@ static void PrintUsage(System.IO.TextWriter writer)
     writer.WriteLine(NpmCommand.Usage);
     writer.WriteLine(PyPiCommand.Usage);
     writer.WriteLine(CargoCommand.Usage);
+    writer.WriteLine(GoCommand.Usage);
 }

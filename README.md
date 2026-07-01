@@ -5,7 +5,8 @@
 <h3 align="center">Know the health of every dependency before it costs you.</h3>
 
 <p align="center">
-  A dependency-health platform for .NET — it builds a project's full transitive graph,
+  A polyglot dependency-health platform (NuGet · npm · PyPI · Cargo · Go), built in .NET —
+  it resolves a project's full transitive graph,
   scores every package for <b>security, license, license-shift and maintenance</b> risk,
   and helps you <b>remediate, gate and monitor</b> it.
 </p>
@@ -35,7 +36,7 @@ Teams discover **license changes** (MediatR, AutoMapper, MassTransit and FluentA
 all went commercial in 2025), **security advisories**, **abandoned packages** and
 **breaking changes** far too late — usually at the next audit or incident.
 
-DepRadar resolves the **full transitive dependency graph** of a NuGet, npm, PyPI or Cargo
+DepRadar resolves the **full transitive dependency graph** of a NuGet, npm, PyPI, Cargo or Go
 package or project, scores every node with an explainable risk model, and answers the question every
 tech lead actually has: **"is this upgrade worth it — and how risky is it?"** It then lets
 you **fix** the risky ones (in place or via a PR), **gate** them in CI, and **monitor** them
@@ -71,7 +72,8 @@ dotnet tool install --global DepRadar.Tool
 depradar scan WindowsAzure.Storage --fail-on high      # exit 1 fails CI on a policy breach
 depradar npm express                                   # npm too
 depradar pypi requests                                 # …PyPI (Python)
-depradar cargo serde                                   # …and Cargo (Rust)
+depradar cargo serde                                   # …Cargo (Rust)
+depradar go golang.org/x/text                          # …and Go
 depradar fix ./MyApp.csproj --open-pr --repo owner/name # auto-fix → opens a pull request
 ```
 
@@ -128,7 +130,7 @@ docker compose up --build      # then open http://localhost:8080
 
 > [!NOTE]
 > Retrieval ships with a **keyless, deterministic hashing embedder** so RAG runs out of the box. It approximates *lexical* overlap, not meaning — register a hosted embedding model behind `IEmbeddingGenerator` for production-grade semantic search.
-- **Multi-ecosystem** — scan **npm**, **PyPI** and **Cargo** packages, *whole manifests* (`package.json`, `requirements.txt`, `Cargo.toml`) or *lockfiles* (`package-lock.json`, `poetry.lock`, `uv.lock`, `Cargo.lock` — exactly what's installed, nothing re-resolved) through the *same* Domain model ([ADR 0020], [ADR 0023], [ADR 0024]).
+- **Multi-ecosystem** — scan **npm**, **PyPI**, **Cargo** and **Go** packages, *whole manifests* (`package.json`, `requirements.txt`, `Cargo.toml`, `go.mod`) or *lockfiles* (`package-lock.json`, `poetry.lock`, `uv.lock`, `Cargo.lock`, `go.sum`) through the *same* Domain model ([ADR 0020], [ADR 0023], [ADR 0024], [ADR 0026]).
 
 ---
 
@@ -152,6 +154,7 @@ depradar pypi requests 2.19.1 --fail-on high
 depradar pypi ./requirements.txt --sbom sbom.json      # PEP 440 specifiers respected
 depradar pypi ./poetry.lock                            # poetry.lock / uv.lock work too
 depradar cargo regex "=1.5.4"                          # Cargo (Rust): crates, Cargo.toml, Cargo.lock
+depradar go golang.org/x/text v0.3.7                   # Go: modules, go.mod, go.sum
 
 # Auto-fix vulnerable dependencies (incl. transitive, via parent-bump)
 depradar fix ./MyApp.csproj --dry-run                     # preview the bumps
@@ -452,6 +455,7 @@ DepRadar was built in six vertical slices, then extended well beyond them.
 - [x] **Lockfile scanning:** `package-lock.json` / `poetry.lock` / `uv.lock` scanned as the exact installed set — the most precise target ([ADR 0023]).
 - [x] **Fourth ecosystem — Cargo (Rust):** crates.io + RUSTSEC via OSV, yanked = deprecated, `Cargo.toml`/`Cargo.lock` targets ([ADR 0024]).
 - [x] **Typosquat warning:** Damerau-Levenshtein lookalike check of direct targets against curated top-package lists ([ADR 0025]).
+- [x] **Fifth ecosystem — Go:** module proxy + Go vulnerability DB via OSV; exact requires, no range grammar ([ADR 0026]).
 
 </details>
 
@@ -463,7 +467,7 @@ Licensed under the [MIT License](LICENSE).
 
 Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [npm registry](https://registry.npmjs.org) · [PyPI JSON API](https://pypi.org/) ·
-[crates.io API](https://crates.io/) ·
+[crates.io API](https://crates.io/) · [Go module proxy](https://proxy.golang.org/) ·
 [deps.dev](https://deps.dev) · [OSV.dev](https://osv.dev) ·
 [GitHub Advisory Database](https://github.com/advisories) ·
 [FIRST.org EPSS](https://www.first.org/epss/) ·
@@ -487,5 +491,6 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0023]: docs/adr/0023-lockfile-scanning.md
 [ADR 0024]: docs/adr/0024-multi-ecosystem-cargo.md
 [ADR 0025]: docs/adr/0025-typosquat-warning.md
+[ADR 0026]: docs/adr/0026-multi-ecosystem-go.md
 [ADR 0018]: docs/adr/0018-api-edge-hardening.md
 [ADR 0019]: docs/adr/0019-ci-coverage-gate-and-provenance.md

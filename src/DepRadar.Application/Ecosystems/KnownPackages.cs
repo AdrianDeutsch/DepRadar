@@ -57,6 +57,29 @@ public static class KnownPackages
         "zip", "tar", "image", "nalgebra", "ndarray", "petgraph", "semver", "time",
     ];
 
+    /// <summary>Top Go modules (module paths, case-sensitive by convention but compared lower-case).</summary>
+    public static readonly IReadOnlyList<string> Go =
+    [
+        "github.com/gin-gonic/gin", "github.com/gorilla/mux", "github.com/spf13/cobra",
+        "github.com/spf13/viper", "github.com/sirupsen/logrus", "github.com/stretchr/testify",
+        "github.com/pkg/errors", "github.com/go-chi/chi", "github.com/labstack/echo",
+        "github.com/gofiber/fiber", "github.com/golang/protobuf", "google.golang.org/protobuf",
+        "google.golang.org/grpc", "golang.org/x/crypto", "golang.org/x/net", "golang.org/x/text",
+        "golang.org/x/sync", "golang.org/x/sys", "golang.org/x/oauth2", "golang.org/x/time",
+        "github.com/prometheus/client_golang", "github.com/go-redis/redis", "github.com/redis/go-redis",
+        "gorm.io/gorm", "github.com/jinzhu/gorm", "github.com/lib/pq", "github.com/jackc/pgx",
+        "github.com/go-sql-driver/mysql", "go.mongodb.org/mongo-driver", "github.com/aws/aws-sdk-go",
+        "github.com/aws/aws-sdk-go-v2", "k8s.io/client-go", "k8s.io/apimachinery", "k8s.io/api",
+        "github.com/docker/docker", "github.com/hashicorp/terraform", "github.com/hashicorp/vault",
+        "github.com/hashicorp/consul", "go.uber.org/zap", "go.uber.org/fx", "github.com/rs/zerolog",
+        "github.com/google/uuid", "github.com/satori/go.uuid", "github.com/golang-jwt/jwt",
+        "github.com/dgrijalva/jwt-go", "github.com/joho/godotenv", "github.com/kelseyhightower/envconfig",
+        "github.com/mitchellh/mapstructure", "gopkg.in/yaml.v2", "gopkg.in/yaml.v3",
+        "github.com/json-iterator/go", "github.com/tidwall/gjson", "github.com/valyala/fasthttp",
+        "github.com/gorilla/websocket", "github.com/nats-io/nats.go", "github.com/segmentio/kafka-go",
+        "github.com/confluentinc/confluent-kafka-go", "github.com/robfig/cron", "github.com/fsnotify/fsnotify",
+    ];
+
     /// <summary>Top NuGet packages (lower-case).</summary>
     public static readonly IReadOnlyList<string> NuGet =
     [

@@ -197,6 +197,33 @@ public sealed class EcosystemResolverTests
     }
 
     [Fact]
+    public async Task Go_follows_exact_requires_and_escapes_upper_case_module_paths()
+    {
+        // demo -> golang.org/x/text v0.3.7 (+ an indirect require that must be skipped);
+        // the root path contains an upper-case segment to pin the !-escaping.
+        var registry = new RouteHandler(new Dictionary<string, string>
+        {
+            ["github.com/!acme/demo/@latest"] = """{"Version":"v1.0.0"}""",
+            ["github.com/!acme/demo/@v/v1.0.0.mod"] = "module github.com/Acme/demo\n\nrequire (\n\tgolang.org/x/text v0.3.7\n\tgithub.com/stretchr/testify v1.8.0 // indirect\n)\n",
+            ["github.com/!acme/demo/@v/list"] = "v1.0.0\n",
+            ["golang.org/x/text/@v/v0.3.7.mod"] = "module golang.org/x/text\n",
+            ["golang.org/x/text/@v/list"] = "v0.3.7\nv0.3.8\n",
+        });
+
+        var assessment = await ScanAsync<IGoScanner>(
+            ("GoProxyClient", registry),
+            ("GoVulnerabilitySource", new OsvHandler(vulnerablePackage: "golang.org/x/text")),
+            scanner => scanner.ScanAsync("github.com/Acme/demo", null, TestContext.Current.CancellationToken));
+
+        assessment.ShouldNotBeNull();
+        assessment.Nodes.Select(n => n.Package.Value).OrderBy(x => x)
+            .ShouldBe(["github.com/Acme/demo", "golang.org/x/text"]);
+        var text = assessment.Nodes.Single(n => n.Package.Value == "golang.org/x/text");
+        text.Version.ToString().ShouldBe("0.3.7");           // exact require, no range resolution
+        text.Input.Vulnerabilities.ShouldNotBeEmpty();       // OSV ecosystem=Go mapped
+    }
+
+    [Fact]
     public async Task Kev_and_epss_evidence_escalate_an_advisory_end_to_end()
     {
         // One package, one HIGH advisory with a CVE alias that is KEV-listed and has a 91% EPSS.

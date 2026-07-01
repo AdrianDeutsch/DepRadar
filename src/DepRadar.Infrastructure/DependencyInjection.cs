@@ -7,6 +7,7 @@ using DepRadar.Infrastructure.External.Cargo;
 using DepRadar.Infrastructure.External.DepsDev;
 using DepRadar.Infrastructure.External.Exploits;
 using DepRadar.Infrastructure.External.GitHub;
+using DepRadar.Infrastructure.External.Go;
 using DepRadar.Infrastructure.External.Npm;
 using DepRadar.Infrastructure.External.NuGet;
 using DepRadar.Infrastructure.External.Osv;
@@ -151,6 +152,22 @@ public static class DependencyInjection
             .AddStandardResilienceHandler();
         services.AddScoped<CargoDependencyGraphResolver>();
         services.AddScoped<ICargoScanner, CargoScanner>();
+
+        // Go ecosystem (module proxy + OSV with ecosystem=Go), surfaced via IGoScanner.
+        services.AddHttpClient<GoProxyClient>(client =>
+            {
+                client.BaseAddress = new Uri("https://proxy.golang.org/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            })
+            .AddStandardResilienceHandler();
+        services.AddHttpClient<GoVulnerabilitySource>(client =>
+            {
+                client.BaseAddress = new Uri(osvBaseUrl ?? DefaultOsvBaseUrl);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            })
+            .AddStandardResilienceHandler();
+        services.AddScoped<GoDependencyGraphResolver>();
+        services.AddScoped<IGoScanner, GoScanner>();
 
         // PyPI ecosystem (JSON API + OSV with ecosystem=PyPI), surfaced via IPyPiScanner.
         services.AddHttpClient<PyPiRegistryClient>(client =>
