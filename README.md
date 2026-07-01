@@ -125,7 +125,7 @@ docker compose up --build      # then open http://localhost:8080
 
 > [!NOTE]
 > Retrieval ships with a **keyless, deterministic hashing embedder** so RAG runs out of the box. It approximates *lexical* overlap, not meaning — register a hosted embedding model behind `IEmbeddingGenerator` for production-grade semantic search.
-- **Multi-ecosystem** — scan **npm** (`depradar npm <pkg>`) and **PyPI** (`depradar pypi <pkg>`) packages through the *same* Domain model.
+- **Multi-ecosystem** — scan **npm** and **PyPI** packages *or whole manifests* (`package.json`, `requirements.txt`) through the *same* Domain model, with ranges/PEP 440 specifiers resolved like the package managers do ([ADR 0020]).
 
 ---
 
@@ -142,9 +142,10 @@ depradar scan ./MyApp.csproj --forbid copyleft --sbom sbom.json --sarif results.
 depradar diff Newtonsoft.Json 12.0.3 13.0.3
 
 # Multi-ecosystem — npm and PyPI through the same risk model
-depradar npm express
-depradar npm minimist 1.2.0 --fail-on high
-depradar pypi requests                                 # latest, or pin: depradar pypi requests 2.19.1
+depradar npm express "^4"                              # exact versions, ranges, or latest
+depradar npm ./package.json --sarif results.sarif      # scan a whole manifest
+depradar pypi requests 2.19.1 --fail-on high
+depradar pypi ./requirements.txt --sbom sbom.json      # PEP 440 specifiers respected
 
 # Auto-fix vulnerable dependencies (incl. transitive, via parent-bump)
 depradar fix ./MyApp.csproj --dry-run                     # preview the bumps
@@ -430,6 +431,7 @@ DepRadar was built in six vertical slices, then extended well beyond them.
 - [x] **Remediation & auto-fix:** minimal safe upgrade + `depradar fix` / PR ([ADR 0014]).
 - [x] **Multi-ecosystem:** npm ([ADR 0016]) and PyPI ([ADR 0017]) support — the same Domain, a new adapter per registry.
 - [x] **Production hardening:** opt-in API-key gate + rate limiting ([ADR 0018]), CI coverage floor-gate + keyless build provenance ([ADR 0019]), HTTP-fixture resolver tests, and graph-truncation surfacing.
+- [x] **Manifest scanning:** `package.json` / `requirements.txt` as first-class scan targets, range-aware root resolution, OSV fixed-version hints for every ecosystem ([ADR 0020]).
 
 </details>
 
@@ -456,5 +458,6 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0014]: docs/adr/0014-remediation-minimal-safe-upgrade.md
 [ADR 0016]: docs/adr/0016-multi-ecosystem-npm.md
 [ADR 0017]: docs/adr/0017-multi-ecosystem-pypi.md
+[ADR 0020]: docs/adr/0020-manifest-scanning-and-ecosystem-cli.md
 [ADR 0018]: docs/adr/0018-api-edge-hardening.md
 [ADR 0019]: docs/adr/0019-ci-coverage-gate-and-provenance.md

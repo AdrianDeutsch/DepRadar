@@ -144,7 +144,8 @@ internal sealed class NpmDependencyGraphResolver(NpmRegistryClient registry, ILo
         return (stable.Count > 0 ? stable : versions).Count > 0 ? (stable.Count > 0 ? stable : versions).Max() : null;
     }
 
-    private static List<SemVer> Versions(NpmPackageDocument? document) =>
+    /// <summary>All parseable published versions — shared with the scanner's range resolution.</summary>
+    internal static List<SemVer> Versions(NpmPackageDocument? document) =>
         document?.Versions is null
             ? []
             : document.Versions.Keys.Where(key => SemVer.TryParse(key, out _)).Select(SemVer.Parse).ToList();

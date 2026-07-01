@@ -133,7 +133,8 @@ internal sealed class PyPiDependencyGraphResolver(PyPiRegistryClient registry, I
         return (stable.Count > 0 ? stable : versions).Max();
     }
 
-    private static List<SemVer> Versions(PyPiDocument? document)
+    /// <summary>All parseable final releases — shared with the scanner's specifier resolution.</summary>
+    internal static List<SemVer> Versions(PyPiDocument? document)
     {
         if (document?.Releases is null)
         {

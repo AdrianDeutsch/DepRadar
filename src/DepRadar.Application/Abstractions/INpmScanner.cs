@@ -10,8 +10,9 @@ namespace DepRadar.Application.Abstractions;
 public interface INpmScanner
 {
     /// <summary>
-    /// Resolves and assesses <paramref name="package"/> at <paramref name="version"/>
-    /// (or its latest), or <see langword="null"/> if it does not exist on the registry.
+    /// Resolves and assesses <paramref name="package"/> at <paramref name="version"/> —
+    /// an exact version, an npm range (<c>^1.2.0</c>, <c>~1.2</c>, …), or null for the
+    /// latest — or <see langword="null"/> if nothing on the registry satisfies it.
     /// </summary>
     Task<GraphAssessment?> ScanAsync(string package, string? version, CancellationToken cancellationToken);
 }

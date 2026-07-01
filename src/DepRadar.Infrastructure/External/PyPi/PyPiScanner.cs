@@ -13,15 +13,34 @@ namespace DepRadar.Infrastructure.External.PyPi;
 /// since those signals are NuGet-specific), and exposes it as <see cref="IPyPiScanner"/>.
 /// </summary>
 internal sealed class PyPiScanner(
+    PyPiRegistryClient registry,
     PyPiDependencyGraphResolver resolver,
     PyPiVulnerabilitySource vulnerabilities,
     TimeProvider timeProvider) : IPyPiScanner
 {
     /// <inheritdoc />
-    public Task<GraphAssessment?> ScanAsync(string package, string? version, CancellationToken cancellationToken)
+    public async Task<GraphAssessment?> ScanAsync(string package, string? version, CancellationToken cancellationToken)
     {
-        var pinned = version is not null && PyPiVersion.TryParse(version, out var parsed) ? parsed : null;
+        var name = PyPiName.Normalize(package);
+
+        // An exact final release pins directly; anything else is treated as a PEP 440
+        // specifier set (>=, ~=, ==X.*, …) and resolved against the published releases —
+        // an unsatisfiable spec is a miss, not a silent fallback to latest.
+        SemVer? pinned = null;
+        if (!string.IsNullOrWhiteSpace(version))
+        {
+            if (!PyPiVersion.TryParse(version, out pinned!))
+            {
+                var document = await registry.GetAsync(name, null, cancellationToken);
+                pinned = PyPiSpecifier.BestMatch(version, PyPiDependencyGraphResolver.Versions(document));
+                if (pinned is null)
+                {
+                    return null;
+                }
+            }
+        }
+
         var analyzer = new ProjectAnalyzer(resolver, vulnerabilities, NullMetadataSource.Instance, NullRepositoryHealthSource.Instance, timeProvider);
-        return analyzer.AnalyzeAsync(PackageId.FromNormalized(PyPiName.Normalize(package)), pinned, cancellationToken);
+        return await analyzer.AnalyzeAsync(PackageId.FromNormalized(name), pinned, cancellationToken);
     }
 }

@@ -58,7 +58,7 @@ internal static class ScanCommand
             return ExitCodes.Usage;
         }
 
-        var graph = Merge(assessments);
+        var graph = GraphMerge.Union(assessments);
         if (!TryResolvePolicy(options, out var policy, out var policyError))
         {
             await Console.Error.WriteLineAsync(policyError);
@@ -165,26 +165,4 @@ internal static class ScanCommand
         }
     }
 
-    /// <summary>Unions the per-root assessments into one graph (distinct nodes and edges).</summary>
-    private static GraphAssessment Merge(List<GraphAssessment> assessments)
-    {
-        if (assessments.Count == 1)
-        {
-            return assessments[0];
-        }
-
-        var nodes = assessments
-            .SelectMany(a => a.Nodes)
-            .GroupBy(n => (n.Package.Value, n.Version.ToString()))
-            .Select(g => g.First())
-            .ToList();
-
-        var edges = assessments
-            .SelectMany(a => a.Edges)
-            .GroupBy(e => (e.DependentId, e.DependentVersion, e.DependencyId, e.DependencyVersion))
-            .Select(g => g.First())
-            .ToList();
-
-        return new GraphAssessment(assessments[0].Root, nodes, edges, assessments.Any(a => a.Truncated));
-    }
 }

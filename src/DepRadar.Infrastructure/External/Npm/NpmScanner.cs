@@ -1,5 +1,6 @@
 using DepRadar.Application.Abstractions;
 using DepRadar.Application.Analysis;
+using DepRadar.Application.Ecosystems;
 using DepRadar.Application.Risk;
 using DepRadar.Domain.ValueObjects;
 
@@ -11,16 +12,35 @@ namespace DepRadar.Infrastructure.External.Npm;
 /// since those signals are NuGet-specific), and exposes it as <see cref="INpmScanner"/>.
 /// </summary>
 internal sealed class NpmScanner(
+    NpmRegistryClient registry,
     NpmDependencyGraphResolver resolver,
     NpmVulnerabilitySource vulnerabilities,
     TimeProvider timeProvider) : INpmScanner
 {
     /// <inheritdoc />
-    public Task<GraphAssessment?> ScanAsync(string package, string? version, CancellationToken cancellationToken)
+    public async Task<GraphAssessment?> ScanAsync(string package, string? version, CancellationToken cancellationToken)
     {
-        var pinned = version is not null && SemVer.TryParse(version, out var parsed) ? parsed : null;
+        var name = package.Trim().ToLowerInvariant();
+
+        // An exact version pins directly; anything else is treated as an npm range
+        // (^, ~, x-ranges, …) and resolved against the published versions — an
+        // unsatisfiable spec is a miss, not a silent fallback to latest.
+        SemVer? pinned = null;
+        if (!string.IsNullOrWhiteSpace(version))
+        {
+            if (!SemVer.TryParse(version, out pinned!))
+            {
+                var document = await registry.GetAsync(name, cancellationToken);
+                pinned = NpmRange.BestMatch(version, NpmDependencyGraphResolver.Versions(document));
+                if (pinned is null)
+                {
+                    return null;
+                }
+            }
+        }
+
         var analyzer = new ProjectAnalyzer(resolver, vulnerabilities, NullMetadataSource.Instance, NullRepositoryHealthSource.Instance, timeProvider);
-        return analyzer.AnalyzeAsync(PackageId.FromNormalized(package.Trim().ToLowerInvariant()), pinned, cancellationToken);
+        return await analyzer.AnalyzeAsync(PackageId.FromNormalized(name), pinned, cancellationToken);
     }
 }
 

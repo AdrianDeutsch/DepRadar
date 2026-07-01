@@ -77,6 +77,80 @@ public sealed class EcosystemResolverTests
         assessment.Nodes.Single(n => n.Package.Value == "urllib3").Input.Vulnerabilities.ShouldNotBeEmpty();
     }
 
+    [Fact]
+    public async Task Npm_resolves_a_range_to_the_best_satisfying_version_and_misses_honestly()
+    {
+        var registry = new RouteHandler(new Dictionary<string, string>
+        {
+            ["/express"] = """{"dist-tags":{"latest":"5.0.0"},"versions":{"4.18.2":{"dependencies":{},"license":"MIT"},"5.0.0":{"dependencies":{},"license":"MIT"}}}""",
+        });
+
+        var pinned = await ScanAsync<INpmScanner>(
+            ("NpmRegistryClient", registry),
+            ("NpmVulnerabilitySource", new OsvHandler(vulnerablePackage: "none")),
+            scanner => scanner.ScanAsync("express", "^4.0.0", TestContext.Current.CancellationToken));
+
+        // ^4.0.0 must NOT silently scan latest (5.0.0).
+        pinned.ShouldNotBeNull();
+        pinned.Nodes.Single().Version.ToString().ShouldBe("4.18.2");
+
+        var unsatisfiable = await ScanAsync<INpmScanner>(
+            ("NpmRegistryClient", registry),
+            ("NpmVulnerabilitySource", new OsvHandler(vulnerablePackage: "none")),
+            scanner => scanner.ScanAsync("express", "^9.0.0", TestContext.Current.CancellationToken));
+
+        unsatisfiable.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task PyPi_resolves_a_specifier_to_the_best_satisfying_release()
+    {
+        var registry = new RouteHandler(new Dictionary<string, string>
+        {
+            ["pypi/requests/json"] = """{"info":{"version":"2.31.0","requires_dist":null,"license":"Apache-2.0"},"releases":{"2.19.1":[],"2.31.0":[]}}""",
+            ["pypi/requests/2.19.1/json"] = """{"info":{"version":"2.19.1","requires_dist":null,"license":"Apache-2.0"},"releases":{"2.19.1":[],"2.31.0":[]}}""",
+        });
+
+        var assessment = await ScanAsync<IPyPiScanner>(
+            ("PyPiRegistryClient", registry),
+            ("PyPiVulnerabilitySource", new OsvHandler(vulnerablePackage: "none")),
+            scanner => scanner.ScanAsync("requests", ">=2,<2.20", TestContext.Current.CancellationToken));
+
+        assessment.ShouldNotBeNull();
+        assessment.Nodes.Single().Version.ToString().ShouldBe("2.19.1");
+    }
+
+    [Fact]
+    public async Task Fixed_version_is_the_smallest_patched_release_above_the_current_one()
+    {
+        // The advisory carries NuGet's canonical casing; the query uses the normalized id.
+        var osv = new RouteHandler(new Dictionary<string, string>
+        {
+            ["v1/vulns/GHSA-test-0001"] = """
+                {"id":"GHSA-test-0001","affected":[{"package":{"ecosystem":"NuGet","name":"Some.Package"},
+                 "ranges":[{"type":"ECOSYSTEM","events":[{"introduced":"0"},{"fixed":"1.2.0"},{"fixed":"2.0.0"}]}]}]}
+                """,
+        });
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddApplication();
+        services.AddInfrastructure();
+        services.AddHttpClient("IVulnerabilitySource").ConfigurePrimaryHttpMessageHandler(() => osv);
+
+        await using var provider = services.BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        var source = scope.ServiceProvider.GetRequiredService<IVulnerabilitySource>();
+
+        var fixedVersion = await source.GetFixedVersionAsync(
+            "GHSA-test-0001",
+            DepRadar.Domain.ValueObjects.PackageId.Create("some.package"),
+            DepRadar.Domain.ValueObjects.SemVer.Parse("1.0.0"),
+            TestContext.Current.CancellationToken);
+
+        fixedVersion.ShouldBe("1.2.0");
+    }
+
     /// <summary>Wires Application + Infrastructure, swaps the two named clients' handlers, runs the scanner.</summary>
     private static async Task<GraphAssessment?> ScanAsync<TScanner>(
         (string Name, HttpMessageHandler Handler) registry,
