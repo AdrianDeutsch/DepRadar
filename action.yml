@@ -12,9 +12,10 @@ inputs:
       What to scan. NuGet: a package id, .csproj or packages.lock.json.
       npm: a package name, package.json or package-lock.json.
       PyPI: a package name, requirements.txt, poetry.lock or uv.lock.
+      Cargo: a crate name, Cargo.toml or Cargo.lock.
     required: true
   ecosystem:
-    description: 'The package ecosystem of the target: nuget, npm, or pypi.'
+    description: 'The package ecosystem of the target: nuget, npm, pypi, or cargo.'
     required: false
     default: 'nuget'
   fail-on:
@@ -44,7 +45,7 @@ inputs:
   tool-version:
     description: 'The DepRadar.Tool version to install.'
     required: false
-    default: '0.2.0'
+    default: '0.3.0'
   tool-source:
     description: 'Extra NuGet source for the tool (e.g. a locally-packed nupkg directory). Defaults to NuGet.org.'
     required: false
@@ -79,8 +80,9 @@ runs:
           nuget) verb=scan ;;
           npm)   verb=npm ;;
           pypi)  verb=pypi ;;
+          cargo) verb=cargo ;;
           *)
-            echo "::error::Unknown ecosystem '${{ inputs.ecosystem }}' (expected nuget, npm, or pypi)."
+            echo "::error::Unknown ecosystem '${{ inputs.ecosystem }}' (expected nuget, npm, pypi, or cargo)."
             exit 2
             ;;
         esac

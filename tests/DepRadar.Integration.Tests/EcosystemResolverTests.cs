@@ -173,6 +173,30 @@ public sealed class EcosystemResolverTests
     }
 
     [Fact]
+    public async Task Cargo_resolves_requirements_skips_dev_and_maps_yanked_to_deprecated()
+    {
+        // demo -> serde (^1.0), plus a dev-dependency and an optional one (both skipped).
+        var registry = new RouteHandler(new Dictionary<string, string>
+        {
+            ["api/v1/crates/demo/0.1.0/dependencies"] = """{"dependencies":[{"crate_id":"serde","req":"^1.0","kind":"normal","optional":false},{"crate_id":"criterion","req":"^0.5","kind":"dev","optional":false},{"crate_id":"tracing","req":"^0.1","kind":"normal","optional":true}]}""",
+            ["api/v1/crates/serde/1.0.190/dependencies"] = """{"dependencies":[]}""",
+            ["api/v1/crates/demo"] = """{"versions":[{"num":"0.1.0","yanked":false,"license":"MIT"}]}""",
+            ["api/v1/crates/serde"] = """{"versions":[{"num":"1.0.190","yanked":false,"license":"MIT OR Apache-2.0"},{"num":"1.0.191","yanked":true,"license":"MIT OR Apache-2.0"}]}""",
+        });
+
+        var assessment = await ScanAsync<ICargoScanner>(
+            ("CargoRegistryClient", registry),
+            ("CargoVulnerabilitySource", new OsvHandler(vulnerablePackage: "serde")),
+            scanner => scanner.ScanAsync("demo", "0.1.0", TestContext.Current.CancellationToken));
+
+        assessment.ShouldNotBeNull();
+        // dev + optional dependencies are skipped; ^1.0 must not select the yanked 1.0.191.
+        assessment.Nodes.Select(n => n.Package.Value).OrderBy(x => x).ShouldBe(["demo", "serde"]);
+        assessment.Nodes.Single(n => n.Package.Value == "serde").Version.ToString().ShouldBe("1.0.190");
+        assessment.Nodes.Single(n => n.Package.Value == "serde").Input.Vulnerabilities.ShouldNotBeEmpty();
+    }
+
+    [Fact]
     public async Task Kev_and_epss_evidence_escalate_an_advisory_end_to_end()
     {
         // One package, one HIGH advisory with a CVE alias that is KEV-listed and has a 91% EPSS.

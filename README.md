@@ -35,8 +35,8 @@ Teams discover **license changes** (MediatR, AutoMapper, MassTransit and FluentA
 all went commercial in 2025), **security advisories**, **abandoned packages** and
 **breaking changes** far too late — usually at the next audit or incident.
 
-DepRadar resolves the **full transitive dependency graph** of a NuGet, npm or PyPI package
-or project, scores every node with an explainable risk model, and answers the question every
+DepRadar resolves the **full transitive dependency graph** of a NuGet, npm, PyPI or Cargo
+package or project, scores every node with an explainable risk model, and answers the question every
 tech lead actually has: **"is this upgrade worth it — and how risky is it?"** It then lets
 you **fix** the risky ones (in place or via a PR), **gate** them in CI, and **monitor** them
 over time with alerts.
@@ -70,7 +70,8 @@ dotnet tool install --global DepRadar.Tool
 
 depradar scan WindowsAzure.Storage --fail-on high      # exit 1 fails CI on a policy breach
 depradar npm express                                   # npm too
-depradar pypi requests                                 # …and PyPI (Python)
+depradar pypi requests                                 # …PyPI (Python)
+depradar cargo serde                                   # …and Cargo (Rust)
 depradar fix ./MyApp.csproj --open-pr --repo owner/name # auto-fix → opens a pull request
 ```
 
@@ -126,7 +127,7 @@ docker compose up --build      # then open http://localhost:8080
 
 > [!NOTE]
 > Retrieval ships with a **keyless, deterministic hashing embedder** so RAG runs out of the box. It approximates *lexical* overlap, not meaning — register a hosted embedding model behind `IEmbeddingGenerator` for production-grade semantic search.
-- **Multi-ecosystem** — scan **npm** and **PyPI** packages, *whole manifests* (`package.json`, `requirements.txt`) or *lockfiles* (`package-lock.json`, `poetry.lock`, `uv.lock` — exactly what's installed, nothing re-resolved) through the *same* Domain model ([ADR 0020], [ADR 0023]).
+- **Multi-ecosystem** — scan **npm**, **PyPI** and **Cargo** packages, *whole manifests* (`package.json`, `requirements.txt`, `Cargo.toml`) or *lockfiles* (`package-lock.json`, `poetry.lock`, `uv.lock`, `Cargo.lock` — exactly what's installed, nothing re-resolved) through the *same* Domain model ([ADR 0020], [ADR 0023], [ADR 0024]).
 
 ---
 
@@ -149,6 +150,7 @@ depradar npm ./package-lock.json                       # …or the lockfile: exa
 depradar pypi requests 2.19.1 --fail-on high
 depradar pypi ./requirements.txt --sbom sbom.json      # PEP 440 specifiers respected
 depradar pypi ./poetry.lock                            # poetry.lock / uv.lock work too
+depradar cargo regex "=1.5.4"                          # Cargo (Rust): crates, Cargo.toml, Cargo.lock
 
 # Auto-fix vulnerable dependencies (incl. transitive, via parent-bump)
 depradar fix ./MyApp.csproj --dry-run                     # preview the bumps
@@ -447,6 +449,7 @@ DepRadar was built in six vertical slices, then extended well beyond them.
 - [x] **Multi-ecosystem auto-fix:** `depradar fix` bumps vulnerable npm ranges and PyPI `==` pins to the minimal clean version ([ADR 0021]).
 - [x] **Exploit intelligence:** EPSS probabilities + CISA KEV escalate "has a CVE" into "is being exploited" — on every ecosystem and path ([ADR 0022]).
 - [x] **Lockfile scanning:** `package-lock.json` / `poetry.lock` / `uv.lock` scanned as the exact installed set — the most precise target ([ADR 0023]).
+- [x] **Fourth ecosystem — Cargo (Rust):** crates.io + RUSTSEC via OSV, yanked = deprecated, `Cargo.toml`/`Cargo.lock` targets ([ADR 0024]).
 
 </details>
 
@@ -458,6 +461,7 @@ Licensed under the [MIT License](LICENSE).
 
 Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [npm registry](https://registry.npmjs.org) · [PyPI JSON API](https://pypi.org/) ·
+[crates.io API](https://crates.io/) ·
 [deps.dev](https://deps.dev) · [OSV.dev](https://osv.dev) ·
 [GitHub Advisory Database](https://github.com/advisories) ·
 [FIRST.org EPSS](https://www.first.org/epss/) ·
@@ -479,5 +483,6 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0021]: docs/adr/0021-multi-ecosystem-autofix.md
 [ADR 0022]: docs/adr/0022-exploit-intelligence-epss-kev.md
 [ADR 0023]: docs/adr/0023-lockfile-scanning.md
+[ADR 0024]: docs/adr/0024-multi-ecosystem-cargo.md
 [ADR 0018]: docs/adr/0018-api-edge-hardening.md
 [ADR 0019]: docs/adr/0019-ci-coverage-gate-and-provenance.md

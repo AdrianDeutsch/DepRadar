@@ -3,6 +3,7 @@ using DepRadar.Application.Abstractions;
 using DepRadar.Application.History;
 using DepRadar.Application.Risk;
 using DepRadar.Infrastructure.Ai;
+using DepRadar.Infrastructure.External.Cargo;
 using DepRadar.Infrastructure.External.DepsDev;
 using DepRadar.Infrastructure.External.Exploits;
 using DepRadar.Infrastructure.External.GitHub;
@@ -134,6 +135,22 @@ public static class DependencyInjection
             .AddStandardResilienceHandler();
         services.AddScoped<NpmDependencyGraphResolver>();
         services.AddScoped<INpmScanner, NpmScanner>();
+
+        // Cargo ecosystem (crates.io + OSV with ecosystem=crates.io), surfaced via ICargoScanner.
+        services.AddHttpClient<CargoRegistryClient>(client =>
+            {
+                client.BaseAddress = new Uri("https://crates.io/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            })
+            .AddStandardResilienceHandler();
+        services.AddHttpClient<CargoVulnerabilitySource>(client =>
+            {
+                client.BaseAddress = new Uri(osvBaseUrl ?? DefaultOsvBaseUrl);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            })
+            .AddStandardResilienceHandler();
+        services.AddScoped<CargoDependencyGraphResolver>();
+        services.AddScoped<ICargoScanner, CargoScanner>();
 
         // PyPI ecosystem (JSON API + OSV with ecosystem=PyPI), surfaced via IPyPiScanner.
         services.AddHttpClient<PyPiRegistryClient>(client =>
