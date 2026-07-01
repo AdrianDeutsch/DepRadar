@@ -429,6 +429,7 @@ DepRadar was built in six vertical slices, then extended well beyond them.
 - [x] **Explainable & exportable findings:** vulnerability paths + SARIF 2.1.0 ([ADR 0013]).
 - [x] **Remediation & auto-fix:** minimal safe upgrade + `depradar fix` / PR ([ADR 0014]).
 - [x] **Multi-ecosystem:** npm ([ADR 0016]) and PyPI ([ADR 0017]) support — the same Domain, a new adapter per registry.
+- [x] **Production hardening:** opt-in API-key gate + rate limiting ([ADR 0018]), CI coverage floor-gate + keyless build provenance ([ADR 0019]), HTTP-fixture resolver tests, and graph-truncation surfacing.
 
 </details>
 
