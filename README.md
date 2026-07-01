@@ -386,6 +386,9 @@ to enable the live Claude narrative ([ADR 0006]).
 | Unit         | xUnit v3 + Shouldly                           | SemVer/npm-range/PEP 440 precedence, risk scoring, drift, prompt-injection shield. |
 | Architecture | NetArchTest                                   | Layer boundaries hold; MediatR & NuGet.Versioning stay out of the core.  |
 | Integration  | Testcontainers + **real PostgreSQL/pgvector** | Idempotent graph upserts, recursive-CTE closure, risk rollup, RAG, drift. |
+| Resolver     | Canned registry + OSV HTTP fixtures           | npm/PyPI transitive BFS, range/PEP 440 matching, de-dup, CVE mapping — no network. |
+
+CI collects coverage (floor-gated) and publishes **keyless SLSA build provenance** for the `.nupkg` ([ADR 0019]); verify a download with `gh attestation verify <file>.nupkg -R AdrianDeutsch/DepRadar`.
 
 ```bash
 dotnet test          # unit + architecture + integration (needs Docker)
@@ -453,3 +456,4 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0016]: docs/adr/0016-multi-ecosystem-npm.md
 [ADR 0017]: docs/adr/0017-multi-ecosystem-pypi.md
 [ADR 0018]: docs/adr/0018-api-edge-hardening.md
+[ADR 0019]: docs/adr/0019-ci-coverage-gate-and-provenance.md

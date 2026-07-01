@@ -12,6 +12,8 @@ on:
 permissions:
   contents: read
   packages: write # publish to GitHub Packages with the built-in token
+  id-token: write # keyless SLSA provenance via GitHub's OIDC token
+  attestations: write # record the build-provenance attestation
 
 jobs:
   publish:
@@ -33,6 +35,13 @@ jobs:
           fi
           echo "Packing DepRadar.Tool $VERSION"
           dotnet pack src/DepRadar.Cli/DepRadar.Cli.csproj -c Release -o ./artifacts/nupkg -p:Version="$VERSION"
+
+      # Keyless SLSA build provenance (Sigstore via GitHub OIDC — no signing cert needed).
+      # Verify a downloaded package with: gh attestation verify <file>.nupkg -R AdrianDeutsch/DepRadar
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "./artifacts/nupkg/*.nupkg"
 
       - name: Push to GitHub Packages
         run: |

@@ -28,5 +28,25 @@ jobs:
 
       # Unit + architecture tests need no Docker; the integration test uses
       # Testcontainers against the Docker engine preinstalled on the runner.
-      - name: Test
-        run: dotnet test --no-build -c Release
+      - name: Test (with coverage)
+        run: >
+          dotnet test --no-build -c Release
+          --collect:"XPlat Code Coverage"
+          --results-directory ./coverage
+
+      - name: Coverage report + floor gate
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          reportgenerator \
+            -reports:'./coverage/**/coverage.cobertura.xml' \
+            -targetdir:./coverage/report \
+            -reporttypes:'MarkdownSummaryGithub;JsonSummary' \
+            -assemblyfilters:'+DepRadar.*;-DepRadar.*.Tests'
+          cat ./coverage/report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+          # Safety net, not a target: fail only on a large regression. Raise as coverage grows.
+          FLOOR=40
+          LINE=$(jq -r '.summary.linecoverage' ./coverage/report/Summary.json)
+          echo "Line coverage: ${LINE}% (floor ${FLOOR}%)"
+          awk "BEGIN{exit !(${LINE} >= ${FLOOR})}" \
+            || { echo "::error::Line coverage ${LINE}% is below the ${FLOOR}% floor"; exit 1; }

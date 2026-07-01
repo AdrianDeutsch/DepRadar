@@ -13,6 +13,7 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="NetArchTest.Rules" />
+    <PackageReference Include="coverlet.collector" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- References every layer so its assembly is loadable for rule evaluation. -->
