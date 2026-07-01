@@ -1,5 +1,5 @@
 name: 'DepRadar dependency-health gate'
-description: 'Scan a NuGet package or project for security, license and maintenance risk, and fail the build on policy violations.'
+description: 'Scan NuGet, npm or PyPI dependencies for security, license and maintenance risk, and fail the build on policy violations.'
 author: 'Adrian Deutsch'
 
 branding:
@@ -8,18 +8,25 @@ branding:
 
 inputs:
   target:
-    description: 'A NuGet package id, a .csproj, or a packages.lock.json path to scan.'
+    description: >-
+      What to scan. NuGet: a package id, .csproj or packages.lock.json.
+      npm: a package name, package.json or package-lock.json.
+      PyPI: a package name, requirements.txt, poetry.lock or uv.lock.
     required: true
+  ecosystem:
+    description: 'The package ecosystem of the target: nuget, npm, or pypi.'
+    required: false
+    default: 'nuget'
   fail-on:
     description: 'Fail when any package is at or above this level: none, low, medium, high, critical.'
     required: false
     default: 'high'
   no-deprecated:
-    description: 'Fail the build if any package is deprecated.'
+    description: 'Fail the build if any package is deprecated (nuget only).'
     required: false
     default: 'false'
   forbid:
-    description: 'Comma-separated license categories to forbid: permissive, weakcopyleft, copyleft, unknown.'
+    description: 'Comma-separated license categories to forbid: permissive, weakcopyleft, copyleft, unknown (nuget only).'
     required: false
     default: ''
   sbom:
@@ -37,7 +44,7 @@ inputs:
   tool-version:
     description: 'The DepRadar.Tool version to install.'
     required: false
-    default: '0.1.0'
+    default: '0.2.0'
   tool-source:
     description: 'Extra NuGet source for the tool (e.g. a locally-packed nupkg directory). Defaults to NuGet.org.'
     required: false
@@ -65,7 +72,24 @@ runs:
         dotnet "${install_args[@]}"
         export PATH="$PATH:$HOME/.dotnet/tools"
 
-        scan_args=(scan "${{ inputs.target }}" --fail-on "${{ inputs.fail-on }}")
+        # Pick the CLI verb from the ecosystem; the license/deprecation policy flags
+        # are NuGet-only, so requesting them elsewhere fails loudly instead of
+        # silently weakening the gate.
+        case "${{ inputs.ecosystem }}" in
+          nuget) verb=scan ;;
+          npm)   verb=npm ;;
+          pypi)  verb=pypi ;;
+          *)
+            echo "::error::Unknown ecosystem '${{ inputs.ecosystem }}' (expected nuget, npm, or pypi)."
+            exit 2
+            ;;
+        esac
+        if [ "$verb" != "scan" ] && { [ "${{ inputs.no-deprecated }}" = "true" ] || [ -n "${{ inputs.forbid }}" ]; }; then
+          echo "::error::'no-deprecated' and 'forbid' are only supported for ecosystem: nuget."
+          exit 2
+        fi
+
+        scan_args=("$verb" "${{ inputs.target }}" --fail-on "${{ inputs.fail-on }}")
         if [ "${{ inputs.no-deprecated }}" = "true" ]; then
           scan_args+=(--no-deprecated)
         fi

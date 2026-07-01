@@ -183,12 +183,19 @@ push, uploads a CycloneDX SBOM artifact, and **publishes a SARIF report to the S
 ```yaml
 - uses: AdrianDeutsch/DepRadar@v1
   with:
-    target: src/MyApp/MyApp.csproj   # a package id, .csproj, or packages.lock.json
+    target: src/MyApp/MyApp.csproj   # a package id, manifest, or lockfile
+    ecosystem: nuget                 # nuget (default) | npm | pypi
     fail-on: high                    # none | low | medium | high | critical
-    no-deprecated: true
-    forbid: copyleft                 # comma-separated license categories
+    no-deprecated: true              # nuget only
+    forbid: copyleft                 # comma-separated license categories (nuget only)
     sbom: sbom.json                  # optional CycloneDX export
     sarif: results.sarif             # optional SARIF for code scanning
+
+# The same gate for a JS or Python repo:
+- uses: AdrianDeutsch/DepRadar@v1
+  with:
+    target: package-lock.json        # or package.json / requirements.txt / poetry.lock / uv.lock
+    ecosystem: npm
 - uses: github/codeql-action/upload-sarif@v3
   if: always()
   with:
