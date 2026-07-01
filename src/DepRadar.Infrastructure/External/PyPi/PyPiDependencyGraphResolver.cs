@@ -96,7 +96,8 @@ internal sealed class PyPiDependencyGraphResolver(PyPiRegistryClient registry, I
         return new ResolvedGraph(root, rootVersion, nodes, edges, truncated);
     }
 
-    private static ResolvedNode BuildNode(PackageId id, SemVer version, PyPiDocument latest, bool isRoot)
+    /// <summary>Builds a node's risk facts from its registry document — shared with the lockfile scan.</summary>
+    internal static ResolvedNode BuildNode(PackageId id, SemVer version, PyPiDocument latest, bool isRoot)
     {
         var versions = Versions(latest);
         var stable = versions.Where(candidate => candidate.IsStable).ToList();

@@ -126,7 +126,7 @@ docker compose up --build      # then open http://localhost:8080
 
 > [!NOTE]
 > Retrieval ships with a **keyless, deterministic hashing embedder** so RAG runs out of the box. It approximates *lexical* overlap, not meaning — register a hosted embedding model behind `IEmbeddingGenerator` for production-grade semantic search.
-- **Multi-ecosystem** — scan **npm** and **PyPI** packages *or whole manifests* (`package.json`, `requirements.txt`) through the *same* Domain model, with ranges/PEP 440 specifiers resolved like the package managers do ([ADR 0020]).
+- **Multi-ecosystem** — scan **npm** and **PyPI** packages, *whole manifests* (`package.json`, `requirements.txt`) or *lockfiles* (`package-lock.json`, `poetry.lock`, `uv.lock` — exactly what's installed, nothing re-resolved) through the *same* Domain model ([ADR 0020], [ADR 0023]).
 
 ---
 
@@ -145,8 +145,10 @@ depradar diff Newtonsoft.Json 12.0.3 13.0.3
 # Multi-ecosystem — npm and PyPI through the same risk model
 depradar npm express "^4"                              # exact versions, ranges, or latest
 depradar npm ./package.json --sarif results.sarif      # scan a whole manifest
+depradar npm ./package-lock.json                       # …or the lockfile: exactly what's installed
 depradar pypi requests 2.19.1 --fail-on high
 depradar pypi ./requirements.txt --sbom sbom.json      # PEP 440 specifiers respected
+depradar pypi ./poetry.lock                            # poetry.lock / uv.lock work too
 
 # Auto-fix vulnerable dependencies (incl. transitive, via parent-bump)
 depradar fix ./MyApp.csproj --dry-run                     # preview the bumps
@@ -437,6 +439,7 @@ DepRadar was built in six vertical slices, then extended well beyond them.
 - [x] **Manifest scanning:** `package.json` / `requirements.txt` as first-class scan targets, range-aware root resolution, OSV fixed-version hints for every ecosystem ([ADR 0020]).
 - [x] **Multi-ecosystem auto-fix:** `depradar fix` bumps vulnerable npm ranges and PyPI `==` pins to the minimal clean version ([ADR 0021]).
 - [x] **Exploit intelligence:** EPSS probabilities + CISA KEV escalate "has a CVE" into "is being exploited" — on every ecosystem and path ([ADR 0022]).
+- [x] **Lockfile scanning:** `package-lock.json` / `poetry.lock` / `uv.lock` scanned as the exact installed set — the most precise target ([ADR 0023]).
 
 </details>
 
@@ -468,5 +471,6 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0020]: docs/adr/0020-manifest-scanning-and-ecosystem-cli.md
 [ADR 0021]: docs/adr/0021-multi-ecosystem-autofix.md
 [ADR 0022]: docs/adr/0022-exploit-intelligence-epss-kev.md
+[ADR 0023]: docs/adr/0023-lockfile-scanning.md
 [ADR 0018]: docs/adr/0018-api-edge-hardening.md
 [ADR 0019]: docs/adr/0019-ci-coverage-gate-and-provenance.md

@@ -1,3 +1,4 @@
+using DepRadar.Application.Ecosystems;
 using DepRadar.Application.Risk;
 using DepRadar.Domain.ValueObjects;
 
@@ -19,4 +20,11 @@ public interface INpmScanner
 
     /// <summary>All published versions of <paramref name="package"/> (empty if unknown) — feeds upgrade-candidate selection.</summary>
     Task<IReadOnlyList<SemVer>> ListVersionsAsync(string package, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Assesses exact locked (name, version) pairs as one flat graph — the lockfile IS
+    /// the resolution, so nothing is re-resolved. Entries whose version does not parse
+    /// are skipped. Returns <see langword="null"/> when no entry is scannable.
+    /// </summary>
+    Task<GraphAssessment?> ScanLockedAsync(IReadOnlyList<LockedPackage> packages, CancellationToken cancellationToken);
 }

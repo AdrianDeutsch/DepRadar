@@ -14,10 +14,16 @@ namespace DepRadar.Cli;
 /// <param name="RegistryLabel">Registry name for the not-found message, e.g. <c>"the npm registry"</c>.</param>
 /// <param name="ParseManifest">Parses the ecosystem's manifest into direct dependencies.</param>
 /// <param name="ResolveScanner">Resolves the ecosystem's scan delegate from the DI scope.</param>
+/// <param name="IsLockfile">Whether a file name is this ecosystem's lockfile.</param>
+/// <param name="ParseLockfile">Parses the ecosystem's lockfile into exact installed packages.</param>
+/// <param name="ResolveLockScanner">Resolves the ecosystem's lockfile-scan delegate from the DI scope.</param>
 internal sealed record EcosystemCli(
     string RegistryLabel,
     Func<string, IReadOnlyList<ManifestDependency>> ParseManifest,
-    Func<IServiceProvider, Func<string, string?, CancellationToken, Task<GraphAssessment?>>> ResolveScanner);
+    Func<IServiceProvider, Func<string, string?, CancellationToken, Task<GraphAssessment?>>> ResolveScanner,
+    Func<string, bool> IsLockfile,
+    Func<string, IReadOnlyList<LockedPackage>> ParseLockfile,
+    Func<IServiceProvider, Func<IReadOnlyList<LockedPackage>, CancellationToken, Task<GraphAssessment?>>> ResolveLockScanner);
 
 /// <summary>
 /// The shared engine behind <c>depradar npm</c> and <c>depradar pypi</c>: scans a single
@@ -78,38 +84,54 @@ internal static class EcosystemCommand
             return ExitCodes.Usage;
         }
 
-        if (!TryResolveTargets(cli, positional, out var targets, out var targetError))
-        {
-            await Console.Error.WriteLineAsync(targetError);
-            return ExitCodes.Usage;
-        }
-
         await using var provider = CliHost.BuildProvider();
         await using var scope = provider.CreateAsyncScope();
-        var scan = cli.ResolveScanner(scope.ServiceProvider);
 
-        var assessments = new List<GraphAssessment>();
+        GraphAssessment graph;
         var unresolved = new List<string>();
-        foreach (var (name, specifier) in targets)
-        {
-            var assessment = await scan(name, specifier, cancellationToken);
-            if (assessment is null)
-            {
-                unresolved.Add(specifier is null ? name : $"{name} {specifier}");
-            }
-            else
-            {
-                assessments.Add(assessment);
-            }
-        }
 
-        if (assessments.Count == 0)
+        if (File.Exists(positional[0]) && cli.IsLockfile(Path.GetFileName(positional[0])))
         {
-            await Console.Error.WriteLineAsync($"Nothing from '{positional[0]}' could be resolved on {cli.RegistryLabel}.");
-            return ExitCodes.Usage;
-        }
+            var (locked, lockError) = await ScanLockfileAsync(cli, scope.ServiceProvider, positional, cancellationToken);
+            if (locked is null)
+            {
+                await Console.Error.WriteLineAsync(lockError);
+                return ExitCodes.Usage;
+            }
 
-        var graph = GraphMerge.Union(assessments);
+            graph = locked;
+        }
+        else
+        {
+            if (!TryResolveTargets(cli, positional, out var targets, out var targetError))
+            {
+                await Console.Error.WriteLineAsync(targetError);
+                return ExitCodes.Usage;
+            }
+
+            var scan = cli.ResolveScanner(scope.ServiceProvider);
+            var assessments = new List<GraphAssessment>();
+            foreach (var (name, specifier) in targets)
+            {
+                var assessment = await scan(name, specifier, cancellationToken);
+                if (assessment is null)
+                {
+                    unresolved.Add(specifier is null ? name : $"{name} {specifier}");
+                }
+                else
+                {
+                    assessments.Add(assessment);
+                }
+            }
+
+            if (assessments.Count == 0)
+            {
+                await Console.Error.WriteLineAsync($"Nothing from '{positional[0]}' could be resolved on {cli.RegistryLabel}.");
+                return ExitCodes.Usage;
+            }
+
+            graph = GraphMerge.Union(assessments);
+        }
         var outcome = PolicyEvaluator.Evaluate(graph, new RiskPolicy(failOn, AllowDeprecated: true, FrozenSet<LicenseCategory>.Empty));
 
         if (json)
@@ -140,6 +162,47 @@ internal static class EcosystemCommand
         }
 
         return outcome.Passed ? ExitCodes.Ok : ExitCodes.PolicyViolation;
+    }
+
+    /// <summary>Scans a lockfile's exact installed packages; returns (null, error) on a usage problem.</summary>
+    private static async Task<(GraphAssessment? Graph, string? Error)> ScanLockfileAsync(
+        EcosystemCli cli,
+        IServiceProvider services,
+        List<string> positional,
+        CancellationToken cancellationToken)
+    {
+        if (positional.Count > 1)
+        {
+            return (null, "A lockfile scan does not take a version argument.");
+        }
+
+        IReadOnlyList<LockedPackage> locked;
+        try
+        {
+            locked = cli.ParseLockfile(await File.ReadAllTextAsync(positional[0], cancellationToken));
+        }
+        catch (FormatException exception)
+        {
+            return (null, $"Could not parse '{positional[0]}': {exception.Message}");
+        }
+
+        if (locked.Count == 0)
+        {
+            return (null, $"No locked packages found in '{positional[0]}'.");
+        }
+
+        var graph = await cli.ResolveLockScanner(services)(locked, cancellationToken);
+        if (graph is null)
+        {
+            return (null, $"No entry of '{positional[0]}' has a scannable version.");
+        }
+
+        if (graph.Nodes.Count < locked.Count)
+        {
+            await Console.Error.WriteLineAsync($"  note: {locked.Count - graph.Nodes.Count} lockfile entr(y/ies) skipped (unparseable version).");
+        }
+
+        return (graph, null);
     }
 
     /// <summary>A package name scans one root; an existing manifest file scans its direct dependencies.</summary>

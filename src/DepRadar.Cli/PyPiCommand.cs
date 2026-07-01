@@ -12,12 +12,16 @@ namespace DepRadar.Cli;
 internal static class PyPiCommand
 {
     /// <summary>The usage banner for <c>pypi</c>.</summary>
-    public const string Usage = "Usage: depradar pypi <package | requirements.txt> [version|specifier] [--fail-on <none|low|medium|high|critical>] [--json] [--sbom <path>] [--sarif <path>]";
+    public const string Usage = "Usage: depradar pypi <package | requirements.txt | poetry.lock | uv.lock> [version|specifier] [--fail-on <none|low|medium|high|critical>] [--json] [--sbom <path>] [--sarif <path>]";
 
     private static readonly EcosystemCli Cli = new(
         RegistryLabel: "PyPI",
         ParseManifest: RequirementsFile.Parse,
-        ResolveScanner: provider => provider.GetRequiredService<IPyPiScanner>().ScanAsync);
+        ResolveScanner: provider => provider.GetRequiredService<IPyPiScanner>().ScanAsync,
+        IsLockfile: fileName => fileName.Equals("poetry.lock", StringComparison.OrdinalIgnoreCase)
+            || fileName.Equals("uv.lock", StringComparison.OrdinalIgnoreCase),
+        ParseLockfile: PyPiLockfile.Parse,
+        ResolveLockScanner: provider => provider.GetRequiredService<IPyPiScanner>().ScanLockedAsync);
 
     /// <summary>Runs <c>pypi</c> with the arguments after the verb.</summary>
     public static Task<int> RunAsync(string[] args, CancellationToken cancellationToken) =>

@@ -99,7 +99,8 @@ internal sealed class NpmDependencyGraphResolver(NpmRegistryClient registry, ILo
         return document;
     }
 
-    private static ResolvedNode BuildNode(PackageId id, SemVer version, NpmPackageDocument document, bool isRoot)
+    /// <summary>Builds a node's risk facts from its registry document — shared with the lockfile scan.</summary>
+    internal static ResolvedNode BuildNode(PackageId id, SemVer version, NpmPackageDocument document, bool isRoot)
     {
         var versionDocument = Version(document, version);
         var (latest, latestLicense) = LatestFacts(document);
