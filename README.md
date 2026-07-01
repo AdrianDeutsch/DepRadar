@@ -98,6 +98,7 @@ docker compose up --build      # then open http://localhost:8080
 - **Maintenance signals** — deprecated, archived or stale (last-commit) source repositories.
 - **Transitive graph + health score** — an explainable score per package and per project.
 - **Vulnerability paths** — for every vulnerable package, the chain that pulled it in (`root → A → B`).
+- **Typosquat warning** — direct targets that look like a typo of a top package (`lodahs` → `lodash`) are flagged ([ADR 0025]).
 
 #### 🛠️ Remediate
 
@@ -450,6 +451,7 @@ DepRadar was built in six vertical slices, then extended well beyond them.
 - [x] **Exploit intelligence:** EPSS probabilities + CISA KEV escalate "has a CVE" into "is being exploited" — on every ecosystem and path ([ADR 0022]).
 - [x] **Lockfile scanning:** `package-lock.json` / `poetry.lock` / `uv.lock` scanned as the exact installed set — the most precise target ([ADR 0023]).
 - [x] **Fourth ecosystem — Cargo (Rust):** crates.io + RUSTSEC via OSV, yanked = deprecated, `Cargo.toml`/`Cargo.lock` targets ([ADR 0024]).
+- [x] **Typosquat warning:** Damerau-Levenshtein lookalike check of direct targets against curated top-package lists ([ADR 0025]).
 
 </details>
 
@@ -484,5 +486,6 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0022]: docs/adr/0022-exploit-intelligence-epss-kev.md
 [ADR 0023]: docs/adr/0023-lockfile-scanning.md
 [ADR 0024]: docs/adr/0024-multi-ecosystem-cargo.md
+[ADR 0025]: docs/adr/0025-typosquat-warning.md
 [ADR 0018]: docs/adr/0018-api-edge-hardening.md
 [ADR 0019]: docs/adr/0019-ci-coverage-gate-and-provenance.md

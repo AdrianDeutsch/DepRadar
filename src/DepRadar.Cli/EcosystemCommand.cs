@@ -17,13 +17,15 @@ namespace DepRadar.Cli;
 /// <param name="IsLockfile">Whether a file name is this ecosystem's lockfile.</param>
 /// <param name="ParseLockfile">Parses the ecosystem's lockfile into exact installed packages.</param>
 /// <param name="ResolveLockScanner">Resolves the ecosystem's lockfile-scan delegate from the DI scope.</param>
+/// <param name="FindLookalike">The well-known package a name looks like a typo of, or null.</param>
 internal sealed record EcosystemCli(
     string RegistryLabel,
     Func<string, IReadOnlyList<ManifestDependency>> ParseManifest,
     Func<IServiceProvider, Func<string, string?, CancellationToken, Task<GraphAssessment?>>> ResolveScanner,
     Func<string, bool> IsLockfile,
     Func<string, IReadOnlyList<LockedPackage>> ParseLockfile,
-    Func<IServiceProvider, Func<IReadOnlyList<LockedPackage>, CancellationToken, Task<GraphAssessment?>>> ResolveLockScanner);
+    Func<IServiceProvider, Func<IReadOnlyList<LockedPackage>, CancellationToken, Task<GraphAssessment?>>> ResolveLockScanner,
+    Func<string, string?> FindLookalike);
 
 /// <summary>
 /// The shared engine behind <c>depradar npm</c> and <c>depradar pypi</c>: scans a single
@@ -89,6 +91,7 @@ internal static class EcosystemCommand
 
         GraphAssessment graph;
         var unresolved = new List<string>();
+        var warnings = new List<string>();
 
         if (File.Exists(positional[0]) && cli.IsLockfile(Path.GetFileName(positional[0])))
         {
@@ -109,6 +112,13 @@ internal static class EcosystemCommand
                 return ExitCodes.Usage;
             }
 
+            // Typos happen where a human writes the name — the direct targets — so the
+            // lookalike check runs exactly there (never on transitive/locked packages).
+            warnings.AddRange(targets
+                .Select(target => (target.Name, Target: cli.FindLookalike(target.Name)))
+                .Where(pair => pair.Target is not null)
+                .Select(pair => $"'{pair.Name}' looks like a typo of '{pair.Target}' — possible typosquat."));
+
             var scan = cli.ResolveScanner(scope.ServiceProvider);
             var assessments = new List<GraphAssessment>();
             foreach (var (name, specifier) in targets)
@@ -126,6 +136,11 @@ internal static class EcosystemCommand
 
             if (assessments.Count == 0)
             {
+                foreach (var warning in warnings)
+                {
+                    await Console.Error.WriteLineAsync($"! {warning}");
+                }
+
                 await Console.Error.WriteLineAsync($"Nothing from '{positional[0]}' could be resolved on {cli.RegistryLabel}.");
                 return ExitCodes.Usage;
             }
@@ -136,11 +151,11 @@ internal static class EcosystemCommand
 
         if (json)
         {
-            ConsoleReport.WriteJson(graph, outcome, unresolved);
+            ConsoleReport.WriteJson(graph, outcome, unresolved, warnings);
         }
         else
         {
-            ConsoleReport.WriteText(graph, outcome, unresolved);
+            ConsoleReport.WriteText(graph, outcome, unresolved, warnings);
         }
 
         if (sbomPath is not null)

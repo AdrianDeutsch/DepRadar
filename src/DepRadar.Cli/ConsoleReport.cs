@@ -13,7 +13,7 @@ internal static class ConsoleReport
     private const int TopFindings = 12;
 
     /// <summary>Writes a human-readable report to stdout.</summary>
-    public static void WriteText(GraphAssessment graph, PolicyOutcome outcome, IReadOnlyList<string> unresolved)
+    public static void WriteText(GraphAssessment graph, PolicyOutcome outcome, IReadOnlyList<string> unresolved, IReadOnlyList<string>? warnings = null)
     {
         var (score, level) = Overall(graph);
 
@@ -29,6 +29,11 @@ internal static class ConsoleReport
         if (unresolved.Count > 0)
         {
             Console.WriteLine($"  unresolved: {string.Join(", ", unresolved)}");
+        }
+
+        foreach (var warning in warnings ?? [])
+        {
+            Console.WriteLine($"  ! {warning}");
         }
 
         Console.WriteLine();
@@ -67,7 +72,7 @@ internal static class ConsoleReport
     }
 
     /// <summary>Writes a machine-readable JSON report to stdout.</summary>
-    public static void WriteJson(GraphAssessment graph, PolicyOutcome outcome, IReadOnlyList<string> unresolved)
+    public static void WriteJson(GraphAssessment graph, PolicyOutcome outcome, IReadOnlyList<string> unresolved, IReadOnlyList<string>? warnings = null)
     {
         var (score, level) = Overall(graph);
 
@@ -99,6 +104,7 @@ internal static class ConsoleReport
             ["overallLevel"] = level.ToString(),
             ["passed"] = outcome.Passed,
             ["unresolved"] = new JsonArray(unresolved.Select(u => (JsonNode)u).ToArray()),
+            ["warnings"] = new JsonArray((warnings ?? []).Select(w => (JsonNode)w).ToArray()),
             ["packages"] = packages,
             ["violations"] = violations,
         };

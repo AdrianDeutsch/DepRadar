@@ -20,7 +20,8 @@ internal static class CargoCommand
         ResolveScanner: provider => provider.GetRequiredService<ICargoScanner>().ScanAsync,
         IsLockfile: fileName => fileName.Equals("Cargo.lock", StringComparison.OrdinalIgnoreCase),
         ParseLockfile: CargoLockfile.Parse,
-        ResolveLockScanner: provider => provider.GetRequiredService<ICargoScanner>().ScanLockedAsync);
+        ResolveLockScanner: provider => provider.GetRequiredService<ICargoScanner>().ScanLockedAsync,
+        FindLookalike: name => Lookalike.FindTarget(name.Trim().ToLowerInvariant(), KnownPackages.Cargo));
 
     /// <summary>Runs <c>cargo</c> with the arguments after the verb.</summary>
     public static Task<int> RunAsync(string[] args, CancellationToken cancellationToken) =>

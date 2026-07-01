@@ -21,7 +21,8 @@ internal static class PyPiCommand
         IsLockfile: fileName => fileName.Equals("poetry.lock", StringComparison.OrdinalIgnoreCase)
             || fileName.Equals("uv.lock", StringComparison.OrdinalIgnoreCase),
         ParseLockfile: PyPiLockfile.Parse,
-        ResolveLockScanner: provider => provider.GetRequiredService<IPyPiScanner>().ScanLockedAsync);
+        ResolveLockScanner: provider => provider.GetRequiredService<IPyPiScanner>().ScanLockedAsync,
+        FindLookalike: name => Lookalike.FindTarget(PyPiName.Normalize(name), KnownPackages.PyPi));
 
     /// <summary>Runs <c>pypi</c> with the arguments after the verb.</summary>
     public static Task<int> RunAsync(string[] args, CancellationToken cancellationToken) =>

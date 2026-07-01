@@ -1,4 +1,5 @@
 using DepRadar.Application.Analysis;
+using DepRadar.Application.Ecosystems;
 using DepRadar.Application.Policy;
 using DepRadar.Application.Projects;
 using DepRadar.Application.Risk;
@@ -37,6 +38,13 @@ internal static class ScanCommand
         await using var scope = provider.CreateAsyncScope();
         var analyzer = scope.ServiceProvider.GetRequiredService<ProjectAnalyzer>();
 
+        // Typos happen where a human writes the name — the direct targets.
+        var warnings = targets
+            .Select(target => (Name: target, Target: Lookalike.FindTarget(target.ToLowerInvariant(), KnownPackages.NuGet)))
+            .Where(pair => pair.Target is not null)
+            .Select(pair => $"'{pair.Name}' looks like a typo of '{pair.Target}' — possible typosquat.")
+            .ToList();
+
         var assessments = new List<GraphAssessment>();
         var unresolved = new List<string>();
         foreach (var target in targets)
@@ -69,11 +77,11 @@ internal static class ScanCommand
 
         if (options.Json)
         {
-            ConsoleReport.WriteJson(graph, outcome, unresolved);
+            ConsoleReport.WriteJson(graph, outcome, unresolved, warnings);
         }
         else
         {
-            ConsoleReport.WriteText(graph, outcome, unresolved);
+            ConsoleReport.WriteText(graph, outcome, unresolved, warnings);
         }
 
         if (options.SbomPath is { } sbomPath)

@@ -21,7 +21,8 @@ internal static class NpmCommand
         IsLockfile: fileName => fileName.Equals("package-lock.json", StringComparison.OrdinalIgnoreCase)
             || fileName.Equals("npm-shrinkwrap.json", StringComparison.OrdinalIgnoreCase),
         ParseLockfile: NpmLockfile.Parse,
-        ResolveLockScanner: provider => provider.GetRequiredService<INpmScanner>().ScanLockedAsync);
+        ResolveLockScanner: provider => provider.GetRequiredService<INpmScanner>().ScanLockedAsync,
+        FindLookalike: name => Lookalike.FindTarget(name.Trim().ToLowerInvariant(), KnownPackages.Npm));
 
     /// <summary>Runs <c>npm</c> with the arguments after the verb.</summary>
     public static Task<int> RunAsync(string[] args, CancellationToken cancellationToken) =>
