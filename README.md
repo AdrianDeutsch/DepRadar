@@ -116,6 +116,7 @@ docker compose up --build      # then open http://localhost:8080
 - **GitHub Action** — a shift-left dependency gate that uploads SBOM + SARIF.
 - **CycloneDX 1.5 SBOM** & **SARIF 2.1.0** — standards-based export; findings land in the **Security** tab.
 - **Live dashboard** (SignalR), **Markdown audit report**, and a full **REST API** (`/scalar/v1`).
+- **Edge hardening** — opt-in `X-API-Key` gate on `/api/*` + per-client rate limiting, both off by default ([ADR 0018]).
 
 #### 🤖 AI &nbsp;·&nbsp; 🌐 Ecosystems
 
@@ -451,3 +452,4 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0014]: docs/adr/0014-remediation-minimal-safe-upgrade.md
 [ADR 0016]: docs/adr/0016-multi-ecosystem-npm.md
 [ADR 0017]: docs/adr/0017-multi-ecosystem-pypi.md
+[ADR 0018]: docs/adr/0018-api-edge-hardening.md

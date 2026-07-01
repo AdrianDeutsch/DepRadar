@@ -37,6 +37,9 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
+// Optional edge hardening: per-client rate limiting (always on) + an opt-in API-key gate.
+builder.Services.AddApiSecurity(builder.Configuration);
+
 // SignalR for live scan progress; a background broadcaster bridges the worker's
 // DB-written status to connected dashboard clients.
 builder.Services.AddSignalR();
@@ -48,6 +51,9 @@ builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database", tag
 var app = builder.Build();
 
 app.UseExceptionHandler();
+
+// Rate limiting + optional API-key gate (no-ops when unconfigured).
+app.UseApiSecurity();
 
 // Serve the dashboard from wwwroot.
 app.UseDefaultFiles();
