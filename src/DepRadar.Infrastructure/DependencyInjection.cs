@@ -1,8 +1,10 @@
 using System.Net;
 using DepRadar.Application.Abstractions;
 using DepRadar.Application.History;
+using DepRadar.Application.Risk;
 using DepRadar.Infrastructure.Ai;
 using DepRadar.Infrastructure.External.DepsDev;
+using DepRadar.Infrastructure.External.Exploits;
 using DepRadar.Infrastructure.External.GitHub;
 using DepRadar.Infrastructure.External.Npm;
 using DepRadar.Infrastructure.External.NuGet;
@@ -91,12 +93,31 @@ public static class DependencyInjection
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AutomaticDecompression = DecompressionMethods.All })
             .AddStandardResilienceHandler();
 
-        services.AddHttpClient<IVulnerabilitySource, OsvVulnerabilitySource>(client =>
+        services.AddHttpClient<OsvVulnerabilitySource>(client =>
             {
                 client.BaseAddress = new Uri(osvBaseUrl ?? DefaultOsvBaseUrl);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
             })
             .AddStandardResilienceHandler();
+        // Every ecosystem's advisories flow through the exploit-intelligence decorator,
+        // so "has a CVE" becomes "is actually being exploited" (EPSS + CISA KEV).
+        services.AddScoped<IVulnerabilitySource>(provider => new ExploitAwareVulnerabilitySource(
+            provider.GetRequiredService<OsvVulnerabilitySource>(),
+            provider.GetRequiredService<IExploitIntelligenceSource>()));
+
+        services.AddHttpClient<FirstEpssClient>(client =>
+            {
+                client.BaseAddress = new Uri("https://api.first.org/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            })
+            .AddStandardResilienceHandler();
+        services.AddHttpClient<CisaKevClient>(client =>
+            {
+                client.BaseAddress = new Uri("https://www.cisa.gov/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            })
+            .AddStandardResilienceHandler();
+        services.AddScoped<IExploitIntelligenceSource, EpssKevExploitIntelligenceSource>();
 
         // npm ecosystem (registry + OSV with ecosystem=npm), surfaced via INpmScanner.
         services.AddHttpClient<NpmRegistryClient>(client =>

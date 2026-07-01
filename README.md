@@ -92,6 +92,7 @@ docker compose up --build      # then open http://localhost:8080
 #### 🔍 Analyze
 
 - **Security scan** — known CVE/GHSA advisories per package version (OSV.dev).
+- **Exploit intelligence** — advisories are escalated with real-world evidence: CISA-KEV-listed CVEs become **Critical**, high **EPSS** probabilities raise severity ([ADR 0022]).
 - **License & license-shift** — flags SPDX changes and the OSS → commercial pivot (the "MediatR case").
 - **Maintenance signals** — deprecated, archived or stale (last-commit) source repositories.
 - **Transitive graph + health score** — an explainable score per package and per project.
@@ -435,6 +436,7 @@ DepRadar was built in six vertical slices, then extended well beyond them.
 - [x] **Production hardening:** opt-in API-key gate + rate limiting ([ADR 0018]), CI coverage floor-gate + keyless build provenance ([ADR 0019]), HTTP-fixture resolver tests, and graph-truncation surfacing.
 - [x] **Manifest scanning:** `package.json` / `requirements.txt` as first-class scan targets, range-aware root resolution, OSV fixed-version hints for every ecosystem ([ADR 0020]).
 - [x] **Multi-ecosystem auto-fix:** `depradar fix` bumps vulnerable npm ranges and PyPI `==` pins to the minimal clean version ([ADR 0021]).
+- [x] **Exploit intelligence:** EPSS probabilities + CISA KEV escalate "has a CVE" into "is being exploited" — on every ecosystem and path ([ADR 0022]).
 
 </details>
 
@@ -448,6 +450,8 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [npm registry](https://registry.npmjs.org) · [PyPI JSON API](https://pypi.org/) ·
 [deps.dev](https://deps.dev) · [OSV.dev](https://osv.dev) ·
 [GitHub Advisory Database](https://github.com/advisories) ·
+[FIRST.org EPSS](https://www.first.org/epss/) ·
+[CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) ·
 [SPDX License List](https://spdx.org/licenses/).
 
 [ADR 0002]: docs/adr/0002-handrolled-mediator.md
@@ -463,5 +467,6 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0017]: docs/adr/0017-multi-ecosystem-pypi.md
 [ADR 0020]: docs/adr/0020-manifest-scanning-and-ecosystem-cli.md
 [ADR 0021]: docs/adr/0021-multi-ecosystem-autofix.md
+[ADR 0022]: docs/adr/0022-exploit-intelligence-epss-kev.md
 [ADR 0018]: docs/adr/0018-api-edge-hardening.md
 [ADR 0019]: docs/adr/0019-ci-coverage-gate-and-provenance.md

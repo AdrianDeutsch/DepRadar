@@ -15,6 +15,7 @@ internal sealed class NpmScanner(
     NpmRegistryClient registry,
     NpmDependencyGraphResolver resolver,
     NpmVulnerabilitySource vulnerabilities,
+    IExploitIntelligenceSource exploitIntelligence,
     TimeProvider timeProvider) : INpmScanner
 {
     /// <inheritdoc />
@@ -39,7 +40,8 @@ internal sealed class NpmScanner(
             }
         }
 
-        var analyzer = new ProjectAnalyzer(resolver, vulnerabilities, NullMetadataSource.Instance, NullRepositoryHealthSource.Instance, timeProvider);
+        var advisories = new ExploitAwareVulnerabilitySource(vulnerabilities, exploitIntelligence);
+        var analyzer = new ProjectAnalyzer(resolver, advisories, NullMetadataSource.Instance, NullRepositoryHealthSource.Instance, timeProvider);
         return await analyzer.AnalyzeAsync(PackageId.FromNormalized(name), pinned, cancellationToken);
     }
 

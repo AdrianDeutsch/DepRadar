@@ -24,7 +24,7 @@ public sealed class CachingTests
         services.AddLogging();
         services.AddInfrastructure();
         // Replace the OSV client's primary handler with a counting one (same named client).
-        services.AddHttpClient("IVulnerabilitySource").ConfigurePrimaryHttpMessageHandler(() => handler);
+        services.AddHttpClient("OsvVulnerabilitySource").ConfigurePrimaryHttpMessageHandler(() => handler);
 
         await using var provider = services.BuildServiceProvider();
         var source = provider.GetRequiredService<IVulnerabilitySource>();

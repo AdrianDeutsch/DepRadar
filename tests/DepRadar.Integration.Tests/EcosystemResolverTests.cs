@@ -136,7 +136,8 @@ public sealed class EcosystemResolverTests
         services.AddLogging();
         services.AddApplication();
         services.AddInfrastructure();
-        services.AddHttpClient("IVulnerabilitySource").ConfigurePrimaryHttpMessageHandler(() => osv);
+        services.AddHttpClient("OsvVulnerabilitySource").ConfigurePrimaryHttpMessageHandler(() => osv);
+        StubExploitFeeds(services);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -164,10 +165,58 @@ public sealed class EcosystemResolverTests
         services.AddInfrastructure();
         services.AddHttpClient(registry.Name).ConfigurePrimaryHttpMessageHandler(() => registry.Handler);
         services.AddHttpClient(vulnerabilities.Name).ConfigurePrimaryHttpMessageHandler(() => vulnerabilities.Handler);
+        StubExploitFeeds(services);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
         return await scan(scope.ServiceProvider.GetRequiredService<TScanner>());
+    }
+
+    [Fact]
+    public async Task Kev_and_epss_evidence_escalate_an_advisory_end_to_end()
+    {
+        // One package, one HIGH advisory with a CVE alias that is KEV-listed and has a 91% EPSS.
+        var registry = new RouteHandler(new Dictionary<string, string>
+        {
+            ["/left-pad"] = """{"dist-tags":{"latest":"1.3.0"},"versions":{"1.3.0":{"dependencies":{},"license":"MIT"}}}""",
+        });
+        var osv = new OsvHandler(vulnerablePackage: "left-pad");
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddApplication();
+        services.AddInfrastructure();
+        services.AddHttpClient("NpmRegistryClient").ConfigurePrimaryHttpMessageHandler(() => registry);
+        services.AddHttpClient("NpmVulnerabilitySource").ConfigurePrimaryHttpMessageHandler(() => osv);
+        services.AddHttpClient("FirstEpssClient").ConfigurePrimaryHttpMessageHandler(
+            () => new RouteHandler(new Dictionary<string, string>
+            {
+                ["data/v1/epss"] = """{"data":[{"cve":"CVE-2024-0001","epss":"0.91234"}]}""",
+            }));
+        services.AddHttpClient("CisaKevClient").ConfigurePrimaryHttpMessageHandler(
+            () => new RouteHandler(new Dictionary<string, string>
+            {
+                ["known_exploited"] = """{"vulnerabilities":[{"cveID":"CVE-2024-0001"}]}""",
+            }));
+
+        await using var provider = services.BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        var assessment = await scope.ServiceProvider.GetRequiredService<INpmScanner>()
+            .ScanAsync("left-pad", null, TestContext.Current.CancellationToken);
+
+        var vulnerability = assessment!.Nodes.Single().Input.Vulnerabilities.Single();
+        vulnerability.Severity.ShouldBe(DepRadar.Domain.Risk.RiskLevel.Critical); // HIGH advisory + KEV ⇒ Critical
+        vulnerability.Summary.ShouldContain("EPSS 91");
+        vulnerability.Summary.ShouldContain("CISA KEV");
+    }
+
+    /// <summary>Keeps exploit-intelligence lookups off the network: empty EPSS + empty KEV catalog.</summary>
+    private static void StubExploitFeeds(ServiceCollection services)
+    {
+        services.AddHttpClient("FirstEpssClient").ConfigurePrimaryHttpMessageHandler(
+            () => new RouteHandler(new Dictionary<string, string> { ["data/v1/epss"] = """{"data":[]}""" }));
+        services.AddHttpClient("CisaKevClient").ConfigurePrimaryHttpMessageHandler(
+            () => new RouteHandler(new Dictionary<string, string> { ["known_exploited"] = """{"vulnerabilities":[]}""" }));
     }
 
     /// <summary>Serves a canned JSON body for the first route key contained in the request URL; 404 otherwise.</summary>

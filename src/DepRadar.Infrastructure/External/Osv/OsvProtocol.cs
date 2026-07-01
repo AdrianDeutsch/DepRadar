@@ -56,7 +56,8 @@ internal static class OsvProtocol
                 vulnerability.Id!,
                 MapSeverity(vulnerability.DatabaseSpecific?.Severity),
                 Summarize(vulnerability),
-                SourceName))
+                SourceName,
+                CveOf(vulnerability)))
             .ToList();
     }
 
@@ -118,6 +119,12 @@ internal static class OsvProtocol
         "LOW" => RiskLevel.Low,
         _ => RiskLevel.Medium,
     };
+
+    // OSV keys GitHub-reviewed advisories by GHSA id; the CVE sits in the aliases.
+    private static string? CveOf(OsvVulnerability vulnerability) =>
+        vulnerability.Id!.StartsWith("CVE-", StringComparison.OrdinalIgnoreCase)
+            ? vulnerability.Id
+            : vulnerability.Aliases?.FirstOrDefault(alias => alias.StartsWith("CVE-", StringComparison.OrdinalIgnoreCase));
 
     private static string Summarize(OsvVulnerability vulnerability)
     {

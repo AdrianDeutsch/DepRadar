@@ -16,6 +16,7 @@ internal sealed class PyPiScanner(
     PyPiRegistryClient registry,
     PyPiDependencyGraphResolver resolver,
     PyPiVulnerabilitySource vulnerabilities,
+    IExploitIntelligenceSource exploitIntelligence,
     TimeProvider timeProvider) : IPyPiScanner
 {
     /// <inheritdoc />
@@ -40,7 +41,8 @@ internal sealed class PyPiScanner(
             }
         }
 
-        var analyzer = new ProjectAnalyzer(resolver, vulnerabilities, NullMetadataSource.Instance, NullRepositoryHealthSource.Instance, timeProvider);
+        var advisories = new ExploitAwareVulnerabilitySource(vulnerabilities, exploitIntelligence);
+        var analyzer = new ProjectAnalyzer(resolver, advisories, NullMetadataSource.Instance, NullRepositoryHealthSource.Instance, timeProvider);
         return await analyzer.AnalyzeAsync(PackageId.FromNormalized(name), pinned, cancellationToken);
     }
 
