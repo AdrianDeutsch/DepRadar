@@ -59,4 +59,15 @@ public sealed class GraphAssessmentLoader(
 public sealed record AssessedNode(PackageId Package, SemVer Version, PackageRiskInput Input, RiskAssessment Assessment);
 
 /// <summary>The assessed transitive graph: nodes (scored) + the raw edge rows.</summary>
-public sealed record GraphAssessment(PackageId Root, IReadOnlyList<AssessedNode> Nodes, IReadOnlyList<GraphEdgeRow> Edges);
+/// <param name="Root">The analyzed root package.</param>
+/// <param name="Nodes">Every resolved version with its scored assessment.</param>
+/// <param name="Edges">The raw dependency edges.</param>
+/// <param name="Truncated">
+/// True when resolution hit the node cap and the graph is incomplete — callers must
+/// surface this, since a truncated graph can hide risk in the unexplored tail.
+/// </param>
+public sealed record GraphAssessment(
+    PackageId Root,
+    IReadOnlyList<AssessedNode> Nodes,
+    IReadOnlyList<GraphEdgeRow> Edges,
+    bool Truncated = false);

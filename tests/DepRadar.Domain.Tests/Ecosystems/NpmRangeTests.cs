@@ -37,6 +37,19 @@ public sealed class NpmRangeTests
     [InlineData("1.0.0 || 2.0.0", "1.5.0", false)]
     [InlineData("1.2.3", "1.2.3", true)]
     [InlineData("1.2.3", "1.2.4", false)]
+    // caret on 0.0.x pins the patch (a common real-world footgun)
+    [InlineData("^0.0.3", "0.0.3", true)]
+    [InlineData("^0.0.3", "0.0.4", false)]
+    // unions of full comparator sets, not just exact versions
+    [InlineData("^1.0.0 || ^2.0.0", "2.5.0", true)]
+    [InlineData("^1.0.0 || ^2.0.0", "3.0.0", false)]
+    [InlineData(">=1.2.0 <1.3.0 || >=2.0.0", "2.9.9", true)]
+    [InlineData(">=1.2.0 <1.3.0 || >=2.0.0", "1.5.0", false)]
+    // tilde on a minor-only range, and a bare partial as an implicit range
+    [InlineData("~0.2", "0.2.9", true)]
+    [InlineData("~0.2", "0.3.0", false)]
+    [InlineData("1.2", "1.2.9", true)]
+    [InlineData("1.2", "1.3.0", false)]
     public void Satisfies_matches_npm_semantics(string range, string version, bool expected)
     {
         NpmRange.Satisfies(SemVer.Parse(version), range).ShouldBe(expected);

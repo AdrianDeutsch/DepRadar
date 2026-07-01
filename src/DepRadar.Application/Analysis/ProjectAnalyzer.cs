@@ -70,7 +70,7 @@ public sealed class ProjectAnalyzer(
                 e.IsDirect ? 1 : 2))
             .ToList();
 
-        return new GraphAssessment(root, nodes, edges);
+        return new GraphAssessment(root, nodes, edges, graph.Truncated);
     }
 
     /// <summary>Best-effort root repository health; any failure degrades to "no signal".</summary>

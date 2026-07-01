@@ -29,6 +29,15 @@ public sealed class PyPiSpecifierTests
     [InlineData("==2.0.0", "2.0.1", false)]
     [InlineData("!=1.5.0", "1.5.0", false)]
     [InlineData("===1.2.3", "1.2.3", true)]
+    // two-part compatible release: ~=2.2 := >=2.2, <3.0
+    [InlineData("~=2.2", "2.9.0", true)]
+    [InlineData("~=2.2", "3.0.0", false)]
+    // whitespace around comma-separated clauses must be tolerated
+    [InlineData(">= 1.0, < 2.0", "1.5.0", true)]
+    [InlineData(">= 1.0, < 2.0", "2.0.0", false)]
+    // a bare version is an exact match
+    [InlineData("2.0.0", "2.0.0", true)]
+    [InlineData("2.0.0", "2.0.1", false)]
     public void Matches_pep440_specifiers(string specifier, string version, bool expected)
     {
         PyPiSpecifier.Matches(SemVer.Parse(version), specifier).ShouldBe(expected);

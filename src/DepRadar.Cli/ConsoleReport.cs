@@ -20,6 +20,12 @@ internal static class ConsoleReport
         Console.WriteLine();
         Console.WriteLine($"DepRadar — {graph.Root.Value}");
         Console.WriteLine($"  packages: {graph.Nodes.Count}    health: {score}/100 ({level})");
+        if (graph.Truncated)
+        {
+            // A capped graph is incomplete — risk in the unexplored tail is invisible.
+            Console.WriteLine("  ! graph truncated at the node cap — results are partial; risk may be understated.");
+        }
+
         if (unresolved.Count > 0)
         {
             Console.WriteLine($"  unresolved: {string.Join(", ", unresolved)}");
@@ -88,6 +94,7 @@ internal static class ConsoleReport
         {
             ["root"] = graph.Root.Value,
             ["packageCount"] = graph.Nodes.Count,
+            ["truncated"] = graph.Truncated,
             ["overallScore"] = score,
             ["overallLevel"] = level.ToString(),
             ["passed"] = outcome.Passed,

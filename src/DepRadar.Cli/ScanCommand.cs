@@ -185,6 +185,6 @@ internal static class ScanCommand
             .Select(g => g.First())
             .ToList();
 
-        return new GraphAssessment(assessments[0].Root, nodes, edges);
+        return new GraphAssessment(assessments[0].Root, nodes, edges, assessments.Any(a => a.Truncated));
     }
 }
