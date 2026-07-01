@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using DepRadar.Application.Abstractions;
 using DepRadar.Application.Analysis;
+using DepRadar.Application.Ecosystems;
 using DepRadar.Application.Projects;
 using DepRadar.Application.Remediation;
 using DepRadar.Domain.ValueObjects;
@@ -10,15 +11,15 @@ using Microsoft.Extensions.DependencyInjection;
 namespace DepRadar.Cli;
 
 /// <summary>
-/// The <c>fix</c> command: finds vulnerable <em>direct</em> dependencies in a project /
-/// props file, bumps each to its minimal safe version, and either writes the file in
-/// place or opens a pull request with the change.
+/// The <c>fix</c> command: finds vulnerable <em>direct</em> dependencies in a manifest
+/// (.csproj/props, package.json, requirements.txt), bumps each to its minimal safe
+/// version, and either writes the file in place or opens a pull request with the change.
 /// </summary>
 internal static class FixCommand
 {
     /// <summary>The usage banner for <c>fix</c>.</summary>
     public const string Usage =
-        "Usage: depradar fix <.csproj | Directory.Packages.props> [--open-pr] [--repo owner/name] [--base main] [--dry-run]";
+        "Usage: depradar fix <.csproj | Directory.Packages.props | package.json | requirements.txt> [--open-pr] [--repo owner/name] [--base main] [--dry-run]";
 
     /// <summary>Runs <c>fix</c> with the arguments after the verb.</summary>
     public static async Task<int> RunAsync(string[] args, CancellationToken cancellationToken)
@@ -36,10 +37,14 @@ internal static class FixCommand
         }
 
         var content = await File.ReadAllTextAsync(manifestPath, cancellationToken);
-        IReadOnlyList<ManifestReference> references;
+
+        await using var provider = CliHost.BuildProvider();
+        await using var scope = provider.CreateAsyncScope();
+
+        ManifestPatch patch;
         try
         {
-            references = ProjectFileParser.ParseReferences(content);
+            patch = await ResolvePatchAsync(scope.ServiceProvider, manifestPath, content, cancellationToken);
         }
         catch (FormatException exception)
         {
@@ -47,23 +52,10 @@ internal static class FixCommand
             return ExitCodes.Usage;
         }
 
-        await using var provider = CliHost.BuildProvider();
-        await using var scope = provider.CreateAsyncScope();
-        var analyzer = scope.ServiceProvider.GetRequiredService<ProjectAnalyzer>();
-        var finder = scope.ServiceProvider.GetRequiredService<SafeUpgradeFinder>();
-
-        var bumps = await ResolveBumpsAsync(references, analyzer, finder, cancellationToken);
-        if (bumps.Count == 0)
+        if (patch.Applied.Count == 0)
         {
             Console.WriteLine("No vulnerable direct dependencies with a known fix. Nothing to do.");
             return ExitCodes.Ok;
-        }
-
-        var patch = ManifestPatcher.Apply(content, bumps);
-        if (patch.Applied.Count == 0)
-        {
-            await Console.Error.WriteLineAsync($"Found fixes but could not locate the versions to patch in '{manifestPath}'.");
-            return ExitCodes.Usage;
         }
 
         Console.WriteLine($"Fixable vulnerable dependencies in {manifestPath}:");
@@ -87,7 +79,48 @@ internal static class FixCommand
         return ExitCodes.Ok;
     }
 
-    private static async Task<Dictionary<string, string>> ResolveBumpsAsync(
+    /// <summary>Dispatches by manifest flavor: package.json → npm, *.txt → PyPI, else NuGet XML.</summary>
+    private static async Task<ManifestPatch> ResolvePatchAsync(
+        IServiceProvider services,
+        string manifestPath,
+        string content,
+        CancellationToken cancellationToken)
+    {
+        var fileName = Path.GetFileName(manifestPath);
+
+        if (string.Equals(fileName, "package.json", StringComparison.OrdinalIgnoreCase))
+        {
+            var scanner = services.GetRequiredService<INpmScanner>();
+            var bumps = await EcosystemFix.ResolveBumpsAsync(
+                NpmManifest.ParseDependencies(content),
+                isPatchable: static _ => true, // every registry range can be rewritten in place
+                scanner.ScanAsync,
+                scanner.ListVersionsAsync,
+                cancellationToken);
+            return NpmManifestPatcher.Apply(content, bumps);
+        }
+
+        if (fileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+        {
+            var scanner = services.GetRequiredService<IPyPiScanner>();
+            var bumps = await EcosystemFix.ResolveBumpsAsync(
+                RequirementsFile.Parse(content),
+                // Only an exact == pin has a single unambiguous version to replace.
+                isPatchable: static dependency => dependency.Specifier.StartsWith("==", StringComparison.Ordinal)
+                    && !dependency.Specifier.Contains('*'),
+                scanner.ScanAsync,
+                scanner.ListVersionsAsync,
+                cancellationToken);
+            return RequirementsPatcher.Apply(content, bumps);
+        }
+
+        var analyzer = services.GetRequiredService<ProjectAnalyzer>();
+        var finder = services.GetRequiredService<SafeUpgradeFinder>();
+        var references = ProjectFileParser.ParseReferences(content);
+        return ManifestPatcher.Apply(content, await ResolveNuGetBumpsAsync(references, analyzer, finder, cancellationToken));
+    }
+
+    private static async Task<Dictionary<string, string>> ResolveNuGetBumpsAsync(
         IReadOnlyList<ManifestReference> references,
         ProjectAnalyzer analyzer,
         SafeUpgradeFinder finder,

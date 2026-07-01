@@ -1,4 +1,5 @@
 using DepRadar.Application.Risk;
+using DepRadar.Domain.ValueObjects;
 
 namespace DepRadar.Application.Abstractions;
 
@@ -16,4 +17,7 @@ public interface IPyPiScanner
     /// null for the latest — or <see langword="null"/> if nothing on PyPI satisfies it.
     /// </summary>
     Task<GraphAssessment?> ScanAsync(string package, string? version, CancellationToken cancellationToken);
+
+    /// <summary>All published final releases of <paramref name="package"/> (empty if unknown) — feeds upgrade-candidate selection.</summary>
+    Task<IReadOnlyList<SemVer>> ListVersionsAsync(string package, CancellationToken cancellationToken);
 }

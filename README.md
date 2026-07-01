@@ -100,7 +100,7 @@ docker compose up --build      # then open http://localhost:8080
 #### 🛠️ Remediate
 
 - **Minimal safe upgrade** — the smallest version that clears every advisory.
-- **`depradar fix`** — applies it: patch the manifest in place, or **open a pull request**.
+- **`depradar fix`** — applies it: patch the manifest in place, or **open a pull request** — for `.csproj`/props, `package.json` **and** `requirements.txt` ([ADR 0021]).
 - **Transitive parent-bump** — bumps a direct dependency to the smallest version whose *whole graph* is clean.
 
 #### 📡 Monitor
@@ -151,6 +151,8 @@ depradar pypi ./requirements.txt --sbom sbom.json      # PEP 440 specifiers resp
 depradar fix ./MyApp.csproj --dry-run                     # preview the bumps
 depradar fix ./MyApp.csproj                                # patch in place
 depradar fix ./MyApp.csproj --open-pr --repo owner/name    # open a PR (needs GITHUB_TOKEN)
+depradar fix ./package.json --dry-run                      # npm: keeps your ^/~ operator
+depradar fix ./requirements.txt                            # PyPI: rewrites == pins
 ```
 
 Exit codes: `0` policy passed · `1` policy violated · `2` usage error.
@@ -432,6 +434,7 @@ DepRadar was built in six vertical slices, then extended well beyond them.
 - [x] **Multi-ecosystem:** npm ([ADR 0016]) and PyPI ([ADR 0017]) support — the same Domain, a new adapter per registry.
 - [x] **Production hardening:** opt-in API-key gate + rate limiting ([ADR 0018]), CI coverage floor-gate + keyless build provenance ([ADR 0019]), HTTP-fixture resolver tests, and graph-truncation surfacing.
 - [x] **Manifest scanning:** `package.json` / `requirements.txt` as first-class scan targets, range-aware root resolution, OSV fixed-version hints for every ecosystem ([ADR 0020]).
+- [x] **Multi-ecosystem auto-fix:** `depradar fix` bumps vulnerable npm ranges and PyPI `==` pins to the minimal clean version ([ADR 0021]).
 
 </details>
 
@@ -459,5 +462,6 @@ Data sources: [NuGet V3 API](https://api.nuget.org/v3/index.json) ·
 [ADR 0016]: docs/adr/0016-multi-ecosystem-npm.md
 [ADR 0017]: docs/adr/0017-multi-ecosystem-pypi.md
 [ADR 0020]: docs/adr/0020-manifest-scanning-and-ecosystem-cli.md
+[ADR 0021]: docs/adr/0021-multi-ecosystem-autofix.md
 [ADR 0018]: docs/adr/0018-api-edge-hardening.md
 [ADR 0019]: docs/adr/0019-ci-coverage-gate-and-provenance.md

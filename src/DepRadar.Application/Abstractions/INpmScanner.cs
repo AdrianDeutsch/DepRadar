@@ -1,4 +1,5 @@
 using DepRadar.Application.Risk;
+using DepRadar.Domain.ValueObjects;
 
 namespace DepRadar.Application.Abstractions;
 
@@ -15,4 +16,7 @@ public interface INpmScanner
     /// latest — or <see langword="null"/> if nothing on the registry satisfies it.
     /// </summary>
     Task<GraphAssessment?> ScanAsync(string package, string? version, CancellationToken cancellationToken);
+
+    /// <summary>All published versions of <paramref name="package"/> (empty if unknown) — feeds upgrade-candidate selection.</summary>
+    Task<IReadOnlyList<SemVer>> ListVersionsAsync(string package, CancellationToken cancellationToken);
 }

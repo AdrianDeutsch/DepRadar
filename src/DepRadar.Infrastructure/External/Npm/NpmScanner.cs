@@ -42,6 +42,13 @@ internal sealed class NpmScanner(
         var analyzer = new ProjectAnalyzer(resolver, vulnerabilities, NullMetadataSource.Instance, NullRepositoryHealthSource.Instance, timeProvider);
         return await analyzer.AnalyzeAsync(PackageId.FromNormalized(name), pinned, cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SemVer>> ListVersionsAsync(string package, CancellationToken cancellationToken)
+    {
+        var document = await registry.GetAsync(package.Trim().ToLowerInvariant(), cancellationToken);
+        return NpmDependencyGraphResolver.Versions(document);
+    }
 }
 
 /// <summary>No-op metadata source — npm has no deps.dev/NuGet catalog lookup.</summary>

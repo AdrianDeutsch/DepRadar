@@ -43,4 +43,11 @@ internal sealed class PyPiScanner(
         var analyzer = new ProjectAnalyzer(resolver, vulnerabilities, NullMetadataSource.Instance, NullRepositoryHealthSource.Instance, timeProvider);
         return await analyzer.AnalyzeAsync(PackageId.FromNormalized(name), pinned, cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SemVer>> ListVersionsAsync(string package, CancellationToken cancellationToken)
+    {
+        var document = await registry.GetAsync(PyPiName.Normalize(package), null, cancellationToken);
+        return PyPiDependencyGraphResolver.Versions(document);
+    }
 }
