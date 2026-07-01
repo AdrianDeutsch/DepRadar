@@ -77,6 +77,11 @@ depradar go golang.org/x/text                          # …and Go
 depradar fix ./MyApp.csproj --open-pr --repo owner/name # auto-fix → opens a pull request
 ```
 
+<p align="center">
+  <img src="docs/assets/cli-multi-eco.png" alt="DepRadar CLI: Go scan with CISA-KEV-escalated Criticals, and an npm scan flagging a typosquat" width="100%" />
+</p>
+<p align="center"><sub>One gate, five ecosystems — exploit intelligence (EPSS + CISA KEV) and typosquat warnings included.</sub></p>
+
 **Run the full platform** (dashboard, drift monitoring, REST API) with one command:
 
 ```bash
