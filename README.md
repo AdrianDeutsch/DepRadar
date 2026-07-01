@@ -119,8 +119,11 @@ docker compose up --build      # then open http://localhost:8080
 
 #### 🤖 AI &nbsp;·&nbsp; 🌐 Ecosystems
 
-- **LLM upgrade advisor** — RAG over changelogs (pgvector) + a deterministic "ask the graph" chatbot.
+- **LLM upgrade advisor** — RAG over changelogs (pgvector) + a deterministic "ask the graph" chatbot. Prose comes from Claude when `ANTHROPIC_API_KEY` is set, else a templated fallback.
 - **Prompt-injection defense** — changelogs are untrusted input; `PromptShield` fences them ([ADR 0006]).
+
+> [!NOTE]
+> Retrieval ships with a **keyless, deterministic hashing embedder** so RAG runs out of the box. It approximates *lexical* overlap, not meaning — register a hosted embedding model behind `IEmbeddingGenerator` for production-grade semantic search.
 - **Multi-ecosystem** — scan **npm** (`depradar npm <pkg>`) and **PyPI** (`depradar pypi <pkg>`) packages through the *same* Domain model.
 
 ---

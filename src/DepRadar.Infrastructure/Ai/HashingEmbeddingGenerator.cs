@@ -1,22 +1,37 @@
 using DepRadar.Application.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace DepRadar.Infrastructure.Ai;
 
 /// <summary>
 /// A deterministic, keyless feature-hashing embedder: it tokenizes text and hashes
-/// tokens into a fixed-dimension, L2-normalized vector. It needs no API key, so the
-/// RAG pipeline works out of the box; a hosted embedding model can replace it behind
-/// <see cref="IEmbeddingGenerator"/>.
+/// tokens into a fixed-dimension, L2-normalized vector, so the RAG pipeline works with
+/// no API key.
 /// </summary>
 /// <remarks>
+/// <para>
+/// <b>This is a fallback, not a semantic model.</b> Feature hashing measures overlap of
+/// <em>literal tokens</em>, not meaning: two passages that say the same thing in
+/// different words score as dissimilar. Retrieval quality is therefore closer to a
+/// keyword match than to true semantic search. For production-grade RAG, register a
+/// hosted embedding model behind <see cref="IEmbeddingGenerator"/>.
+/// </para>
+/// <para>
 /// Uses a stable FNV-1a hash (not <see cref="string.GetHashCode()"/>, which is
 /// randomized per process) so a query embedded in the API matches chunks embedded in
 /// the Worker.
+/// </para>
 /// </remarks>
 internal sealed class HashingEmbeddingGenerator : IEmbeddingGenerator
 {
     /// <summary>Embedding dimensionality (the pgvector column width).</summary>
     public const int Dimensions = 256;
+
+    public HashingEmbeddingGenerator(ILogger<HashingEmbeddingGenerator> logger) =>
+        logger.LogWarning(
+            "RAG semantic search is running on the deterministic hashing embedder (keyless fallback): " +
+            "retrieval approximates lexical token overlap, not meaning. Register a hosted embedding model " +
+            "behind IEmbeddingGenerator for production-grade semantic retrieval.");
 
     /// <inheritdoc />
     public Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken)
