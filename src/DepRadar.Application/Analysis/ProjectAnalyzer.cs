@@ -21,6 +21,13 @@ public sealed class ProjectAnalyzer(
     TimeProvider timeProvider)
 {
     /// <summary>
+    /// Advisory lookups per node are independent, so they run concurrently — bounded
+    /// well below the resilience handler's rate limits (a 77-node graph would otherwise
+    /// make 77 sequential round trips).
+    /// </summary>
+    private const int MaxConcurrentLookups = 8;
+
+    /// <summary>
     /// Resolves <paramref name="root"/>'s transitive graph from NuGet, scores every
     /// node, and returns the assessed graph — or <see langword="null"/> if the package
     /// (or the pinned version) does not exist. <paramref name="pinnedVersion"/> selects
@@ -38,10 +45,20 @@ public sealed class ProjectAnalyzer(
         // call), mirroring the scan pipeline which enriches the scanned package.
         var (rootArchived, rootStale) = await ResolveRootHealthAsync(root, cancellationToken);
 
-        var nodes = new List<AssessedNode>(graph.Nodes.Count);
-        foreach (var node in graph.Nodes)
+        using var gate = new SemaphoreSlim(MaxConcurrentLookups);
+        var nodes = (await Task.WhenAll(graph.Nodes.Select(async node =>
         {
-            var advisories = await vulnerabilitySource.GetAsync(node.Id, node.Version, cancellationToken);
+            await gate.WaitAsync(cancellationToken);
+            IReadOnlyList<VulnerabilityRecord> advisories;
+            try
+            {
+                advisories = await vulnerabilitySource.GetAsync(node.Id, node.Version, cancellationToken);
+            }
+            finally
+            {
+                gate.Release();
+            }
+
             var vulnerabilities = advisories
                 .Select(a => PackageVulnerability.Create(node.Id, node.Version, a.AdvisoryId, a.Severity, a.Summary, a.Source))
                 .ToList();
@@ -56,8 +73,8 @@ public sealed class ProjectAnalyzer(
                 node.IsRoot && rootStale,
                 vulnerabilities);
 
-            nodes.Add(new AssessedNode(node.Id, node.Version, input, PackageRiskScorer.Assess(input)));
-        }
+            return new AssessedNode(node.Id, node.Version, input, PackageRiskScorer.Assess(input));
+        }))).ToList();
 
         var edges = graph.Edges
             .Select(e => new GraphEdgeRow(

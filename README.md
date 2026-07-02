@@ -42,6 +42,19 @@ tech lead actually has: **"is this upgrade worth it — and how risky is it?"** 
 you **fix** the risky ones (in place or via a PR), **gate** them in CI, and **monitor** them
 over time with alerts.
 
+**How is that different from Dependabot, Renovate or Snyk?**
+
+| | Dependabot / Renovate | Snyk & co. | **DepRadar** |
+|---|---|---|---|
+| Core job | open update PRs | commercial vulnerability platform | **explainable risk scoring + one CI gate** |
+| Prioritization | none (a PR per bump) | proprietary | **EPSS + CISA KEV — "is it actually exploited?"** |
+| Ecosystems, one tool | per-repo config | yes (paid tiers) | **NuGet · npm · PyPI · Cargo · Go, keyless** |
+| Runs | GitHub-hosted | SaaS | **local CLI / your CI — no account, no key** |
+| License & maintenance risk | ✗ | partial | **license shift, deprecated/archived/stale signals** |
+
+DepRadar complements a PR bot: the bot bumps versions, DepRadar tells you **which risk
+actually matters** and blocks the build when it crosses your policy.
+
 <p align="center">
   <img src="docs/assets/demo.gif" alt="DepRadar dashboard demo" width="100%" />
 </p>
@@ -122,20 +135,24 @@ docker compose up --build      # then open http://localhost:8080
 
 #### 🔌 Integrate
 
-- **CLI + policy-as-code** — `depradar scan` as a `dotnet tool`; gate from a `depradar.json` in the repo.
+- **CLI + policy-as-code** — one `dotnet tool`; a committed `depradar.json` gates **every** ecosystem verb.
 - **GitHub Action** — a shift-left dependency gate that uploads SBOM + SARIF.
 - **CycloneDX 1.5 SBOM** & **SARIF 2.1.0** — standards-based export; findings land in the **Security** tab.
 - **Live dashboard** (SignalR), **Markdown audit report**, and a full **REST API** (`/scalar/v1`).
 - **Edge hardening** — opt-in `X-API-Key` gate on `/api/*` + per-client rate limiting, both off by default ([ADR 0018]).
 
-#### 🤖 AI &nbsp;·&nbsp; 🌐 Ecosystems
+#### 🌐 Ecosystems
+
+- **Multi-ecosystem** — scan **npm**, **PyPI**, **Cargo** and **Go** packages, *whole manifests* (`package.json`, `requirements.txt`, `Cargo.toml`, `go.mod`) or *lockfiles* (`package-lock.json`, `poetry.lock`, `uv.lock`, `Cargo.lock`, `go.sum`) through the *same* Domain model ([ADR 0020], [ADR 0023], [ADR 0024], [ADR 0026]).
+- **One gate everywhere** — a committed `depradar.json` policy, `--sbom`/`--sarif`, exploit intelligence and typosquat warnings apply identically to all five ecosystems.
+
+#### 🤖 AI
 
 - **LLM upgrade advisor** — RAG over changelogs (pgvector) + a deterministic "ask the graph" chatbot. Prose comes from Claude when `ANTHROPIC_API_KEY` is set, else a templated fallback.
 - **Prompt-injection defense** — changelogs are untrusted input; `PromptShield` fences them ([ADR 0006]).
 
 > [!NOTE]
 > Retrieval ships with a **keyless, deterministic hashing embedder** so RAG runs out of the box. It approximates *lexical* overlap, not meaning — register a hosted embedding model behind `IEmbeddingGenerator` for production-grade semantic search.
-- **Multi-ecosystem** — scan **npm**, **PyPI**, **Cargo** and **Go** packages, *whole manifests* (`package.json`, `requirements.txt`, `Cargo.toml`, `go.mod`) or *lockfiles* (`package-lock.json`, `poetry.lock`, `uv.lock`, `Cargo.lock`, `go.sum`) through the *same* Domain model ([ADR 0020], [ADR 0023], [ADR 0024], [ADR 0026]).
 
 ---
 
@@ -173,8 +190,9 @@ Exit codes: `0` policy passed · `1` policy violated · `2` usage error.
 
 ### Policy-as-code
 
-Keep the gate in the repo, not in CI flags. The CLI auto-detects `depradar.json` in the
-working directory (or pass `--policy <path>`); it takes precedence over the flags:
+Keep the gate in the repo, not in CI flags. Every verb (`scan`, `npm`, `pypi`, `cargo`,
+`go`) auto-detects `depradar.json` in the working directory (or pass `--policy <path>`);
+it takes precedence over the flags:
 
 ```jsonc
 {
@@ -461,6 +479,12 @@ DepRadar was built in six vertical slices, then extended well beyond them.
 - [x] **Fourth ecosystem — Cargo (Rust):** crates.io + RUSTSEC via OSV, yanked = deprecated, `Cargo.toml`/`Cargo.lock` targets ([ADR 0024]).
 - [x] **Typosquat warning:** Damerau-Levenshtein lookalike check of direct targets against curated top-package lists ([ADR 0025]).
 - [x] **Fifth ecosystem — Go:** module proxy + Go vulnerability DB via OSV; exact requires, no range grammar ([ADR 0026]).
+
+**Next up**
+
+- [ ] Self-contained CLI binaries (no .NET SDK needed — the npm/PyPI/Cargo/Go audience doesn't have one).
+- [ ] Multi-ecosystem dashboard & drift monitoring (the web path is NuGet-only today).
+- [ ] deps.dev license enrichment for Go/Cargo · Maven as ecosystem #6.
 
 </details>
 

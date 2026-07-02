@@ -12,7 +12,7 @@ namespace DepRadar.Cli;
 internal static class CargoCommand
 {
     /// <summary>The usage banner for <c>cargo</c>.</summary>
-    public const string Usage = "Usage: depradar cargo <crate | Cargo.toml | Cargo.lock> [version|req] [--fail-on <none|low|medium|high|critical>] [--json] [--sbom <path>] [--sarif <path>]";
+    public const string Usage = "Usage: depradar cargo <crate | Cargo.toml | Cargo.lock> [version|req] [--fail-on <none|low|medium|high|critical>] [--policy <file>] [--json] [--sbom <path>] [--sarif <path>]";
 
     private static readonly EcosystemCli Cli = new(
         RegistryLabel: "crates.io",

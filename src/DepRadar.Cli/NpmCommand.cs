@@ -12,7 +12,7 @@ namespace DepRadar.Cli;
 internal static class NpmCommand
 {
     /// <summary>The usage banner for <c>npm</c>.</summary>
-    public const string Usage = "Usage: depradar npm <package | package.json | package-lock.json> [version|range] [--fail-on <none|low|medium|high|critical>] [--json] [--sbom <path>] [--sarif <path>]";
+    public const string Usage = "Usage: depradar npm <package | package.json | package-lock.json> [version|range] [--fail-on <none|low|medium|high|critical>] [--policy <file>] [--json] [--sbom <path>] [--sarif <path>]";
 
     private static readonly EcosystemCli Cli = new(
         RegistryLabel: "the npm registry",

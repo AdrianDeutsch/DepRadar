@@ -12,7 +12,7 @@ namespace DepRadar.Cli;
 internal static class PyPiCommand
 {
     /// <summary>The usage banner for <c>pypi</c>.</summary>
-    public const string Usage = "Usage: depradar pypi <package | requirements.txt | poetry.lock | uv.lock> [version|specifier] [--fail-on <none|low|medium|high|critical>] [--json] [--sbom <path>] [--sarif <path>]";
+    public const string Usage = "Usage: depradar pypi <package | requirements.txt | poetry.lock | uv.lock> [version|specifier] [--fail-on <none|low|medium|high|critical>] [--policy <file>] [--json] [--sbom <path>] [--sarif <path>]";
 
     private static readonly EcosystemCli Cli = new(
         RegistryLabel: "PyPI",

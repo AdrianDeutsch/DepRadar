@@ -39,6 +39,7 @@ internal static class EcosystemCommand
     {
         var json = false;
         var failOn = RiskLevel.High;
+        string? policyPath = null;
         string? sbomPath = null;
         string? sarifPath = null;
         var positional = new List<string>();
@@ -58,6 +59,10 @@ internal static class EcosystemCommand
                         return ExitCodes.Usage;
                     }
 
+                    break;
+
+                case "--policy" when i + 1 < args.Length:
+                    policyPath = args[++i];
                     break;
 
                 case "--sbom" when i + 1 < args.Length:
@@ -147,7 +152,15 @@ internal static class EcosystemCommand
 
             graph = GraphMerge.Union(assessments);
         }
-        var outcome = PolicyEvaluator.Evaluate(graph, new RiskPolicy(failOn, AllowDeprecated: true, FrozenSet<LicenseCategory>.Empty));
+        // A committed depradar.json governs every ecosystem, not just the NuGet scan.
+        var fallback = new RiskPolicy(failOn, AllowDeprecated: true, FrozenSet<LicenseCategory>.Empty);
+        if (!CliPolicy.TryResolve(policyPath, fallback, out var policy, out var policyError))
+        {
+            await Console.Error.WriteLineAsync(policyError);
+            return ExitCodes.Usage;
+        }
+
+        var outcome = PolicyEvaluator.Evaluate(graph, policy!);
 
         if (json)
         {

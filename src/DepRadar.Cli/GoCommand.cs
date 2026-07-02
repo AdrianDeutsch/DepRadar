@@ -12,7 +12,7 @@ namespace DepRadar.Cli;
 internal static class GoCommand
 {
     /// <summary>The usage banner for <c>go</c>.</summary>
-    public const string Usage = "Usage: depradar go <module | go.mod | go.sum> [version] [--fail-on <none|low|medium|high|critical>] [--json] [--sbom <path>] [--sarif <path>]";
+    public const string Usage = "Usage: depradar go <module | go.mod | go.sum> [version] [--fail-on <none|low|medium|high|critical>] [--policy <file>] [--json] [--sbom <path>] [--sarif <path>]";
 
     private static readonly EcosystemCli Cli = new(
         RegistryLabel: "the Go module proxy",

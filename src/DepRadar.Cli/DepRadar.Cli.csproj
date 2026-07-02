@@ -9,7 +9,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>depradar</ToolCommandName>
     <PackageId>DepRadar.Tool</PackageId>
-    <Version>0.5.0</Version>
+    <Version>0.6.0</Version>
     <Authors>Adrian Deutsch</Authors>
     <Description>Dependency-health CLI: scan a NuGet package or project for security, license and maintenance risk, fail CI on policy violations, and auto-fix vulnerable dependencies (incl. transitive) with a pull request.</Description>
     <PackageOutputPath>$(MSBuildThisFileDirectory)../../artifacts/nupkg</PackageOutputPath>

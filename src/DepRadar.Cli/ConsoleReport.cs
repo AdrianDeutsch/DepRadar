@@ -18,12 +18,12 @@ internal static class ConsoleReport
         var (score, level) = Overall(graph);
 
         Console.WriteLine();
-        Console.WriteLine($"DepRadar — {graph.Root.Value}");
-        Console.WriteLine($"  packages: {graph.Nodes.Count}    health: {score}/100 ({level})");
+        Console.WriteLine($"{Ansi.Brand("DepRadar")} — {graph.Root.Value}");
+        Console.WriteLine($"  packages: {graph.Nodes.Count}    health: {score}/100 ({Ansi.Level(level.ToString(), level)})");
         if (graph.Truncated)
         {
             // A capped graph is incomplete — risk in the unexplored tail is invisible.
-            Console.WriteLine("  ! graph truncated at the node cap — results are partial; risk may be understated.");
+            Console.WriteLine(Ansi.Warn("  ! graph truncated at the node cap — results are partial; risk may be understated."));
         }
 
         if (unresolved.Count > 0)
@@ -33,7 +33,7 @@ internal static class ConsoleReport
 
         foreach (var warning in warnings ?? [])
         {
-            Console.WriteLine($"  ! {warning}");
+            Console.WriteLine(Ansi.Warn($"  ! {warning}"));
         }
 
         Console.WriteLine();
@@ -49,22 +49,24 @@ internal static class ConsoleReport
                 ? "ok"
                 : string.Join(", ", node.Assessment.Findings.Select(f => f.Code).Distinct());
             var coordinate = $"{node.Package.Value} {node.Version}";
+            var levelLabel = Ansi.Level($"{node.Assessment.Score.Level,-8}", node.Assessment.Score.Level);
+            var codesLabel = node.Assessment.Findings.Count == 0 ? Ansi.Dim(codes) : codes.Replace("VULN", Ansi.Fail("VULN"), StringComparison.Ordinal);
             Console.WriteLine(string.Create(
                 CultureInfo.InvariantCulture,
-                $"    {node.Assessment.Score.Level,-8} {node.Assessment.Score.Value,3}/100  {coordinate,-42} {codes}"));
+                $"    {levelLabel} {node.Assessment.Score.Value,3}/100  {coordinate,-42} {codesLabel}"));
         }
 
         Console.WriteLine();
         if (outcome.Passed)
         {
-            Console.WriteLine("  Policy: PASSED");
+            Console.WriteLine($"  Policy: {Ansi.Ok("PASSED")}");
         }
         else
         {
-            Console.WriteLine($"  Policy: FAILED ({outcome.Violations.Count} violation(s))");
+            Console.WriteLine($"  Policy: {Ansi.Fail("FAILED")} ({outcome.Violations.Count} violation(s))");
             foreach (var violation in outcome.Violations)
             {
-                Console.WriteLine($"    x {violation.Package} — {violation.Reason}");
+                Console.WriteLine($"    {Ansi.Fail("x")} {violation.Package} — {violation.Reason}");
             }
         }
 
